@@ -65,6 +65,9 @@ startup fails.
 ## Quota home and Live
 
 The root route opens `/quota`; the previous dashboard remains at `/dashboard`.
+Choose Overview or Timeline at the top; this choice is saved per browser origin.
+Timeline compares all accounts independently of detail filters, with 20 accounts
+per timeline page, weekly/session zoom, and previous/next date navigation.
 The overview includes every quota-capable account, regardless of the detail
 filters or pagination. It preserves independent limits rather than averaging
 unrelated quotas. Unsupported or unobserved values stay unknown. Request counts

@@ -1536,6 +1536,12 @@
     "precise_save_recovery_required": "Không thể đọc lại kết quả lưu. Đã tạm dừng chỉnh sửa. Lưu lại để khôi phục mốc cơ sở của bản nháp, hoặc tải lại cấu hình."
   },
   "quota_management": {
+    "view_label": "Chế độ xem hạn mức",
+    "view_overview": "Tổng quan",
+    "view_timeline": "Dòng thời gian",
+    "timeline_waiting": "Đang chờ cửa sổ đặt lại",
+    "timeline_waiting_hint": "Bật Trực tiếp hoặc cập nhật chi tiết tài khoản để tải thời gian đặt lại.",
+    "timeline_page": "Trang dòng thời gian {{current}} / {{total}}",
     "live": "Trực tiếp",
     "live_hint": "Lưu trong trình duyệt. Tạm dừng khi ẩn hoặc ngoại tuyến; mỗi tài khoản cách ít nhất 2 phút giữa các lần cập nhật.",
     "overview_title": "Tổng quan mọi tài khoản",

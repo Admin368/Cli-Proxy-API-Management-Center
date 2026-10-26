@@ -1580,6 +1580,12 @@
     }
   },
   "quota_management": {
+    "view_label": "Quota view",
+    "view_overview": "Overview",
+    "view_timeline": "Timeline",
+    "timeline_waiting": "Waiting for reset windows",
+    "timeline_waiting_hint": "Keep Live on or refresh account details to load reset times for these accounts.",
+    "timeline_page": "Timeline page {{current}} of {{total}}",
     "live": "Live",
     "live_hint": "Saved on this browser. Pauses when hidden or offline; accounts refresh at least 2 minutes apart.",
     "overview_title": "All accounts at a glance",

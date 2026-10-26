@@ -1607,6 +1607,12 @@
     }
   },
   "quota_management": {
+    "view_label": "額度檢視",
+    "view_overview": "概覽",
+    "view_timeline": "時間軸",
+    "timeline_waiting": "等待重設視窗",
+    "timeline_waiting_hint": "開啟即時或更新帳號詳情，以載入這些帳號的重設時間。",
+    "timeline_page": "時間軸第 {{current}} 頁，共 {{total}} 頁",
     "live": "即時",
     "live_hint": "儲存在此瀏覽器。隱藏或離線時暫停；每個帳號的更新間隔至少為 2 分鐘。",
     "overview_title": "所有帳號概覽",

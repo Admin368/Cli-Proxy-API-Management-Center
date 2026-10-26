@@ -1580,6 +1580,12 @@
     }
   },
   "quota_management": {
+    "view_label": "할당량 보기",
+    "view_overview": "개요",
+    "view_timeline": "타임라인",
+    "timeline_waiting": "초기화 기간 대기 중",
+    "timeline_waiting_hint": "실시간을 켜거나 계정 세부 정보를 새로고침하여 초기화 시간을 불러오세요.",
+    "timeline_page": "타임라인 {{current}} / {{total}} 페이지",
     "live": "실시간",
     "live_hint": "이 브라우저에 저장됩니다. 숨겨진 탭이나 오프라인에서는 일시 중지하며 계정별 갱신 간격은 최소 2분입니다.",
     "overview_title": "모든 계정 한눈에 보기",

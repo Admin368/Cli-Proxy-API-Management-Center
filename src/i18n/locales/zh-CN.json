@@ -1579,6 +1579,12 @@
     }
   },
   "quota_management": {
+    "view_label": "额度视图",
+    "view_overview": "概览",
+    "view_timeline": "时间线",
+    "timeline_waiting": "等待重置窗口",
+    "timeline_waiting_hint": "开启实时或刷新账号详情，以加载这些账号的重置时间。",
+    "timeline_page": "时间线第 {{current}} 页，共 {{total}} 页",
     "live": "实时",
     "live_hint": "保存在此浏览器。隐藏或离线时暂停；每个账号的刷新间隔至少为 2 分钟。",
     "overview_title": "所有账号概览",
