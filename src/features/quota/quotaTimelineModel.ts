@@ -31,6 +31,8 @@ export interface TimelineLimit {
   label: string;
   /** Remaining percent, 0..100. */
   remaining: number;
+  /** Observation window's own reset; overview meters must not share a lane's reset. */
+  resetAtMs?: number | null;
 }
 
 /** A manual quota-reset credit attached to a Codex credential. */
@@ -412,6 +414,7 @@ export function buildTimelineLane(input: TimelineLaneInput): TimelineLane {
         .map((window) => ({
           label: window.label ?? '',
           remaining: clampPercent(100 - (window.usedPercent as number)),
+          resetAtMs: window.resetAtMs,
         })),
       resetCredits,
     };
@@ -442,6 +445,7 @@ export function buildTimelineLane(input: TimelineLaneInput): TimelineLane {
         .map((window) => ({
           label: window.label ?? window.id,
           remaining: window.remainingPercent as number,
+          resetAtMs: window.resetAtMs,
         })),
     };
   }
@@ -491,8 +495,12 @@ export function buildTimelineLane(input: TimelineLaneInput): TimelineLane {
       periodHours: chosen.periodHours ?? null,
       remaining: remainingOf(chosen),
       limits: buckets
-        .map((bucket) => ({ label: bucket.label ?? '', remaining: remainingOf(bucket) }))
-        .filter((limit): limit is TimelineLimit => limit.remaining !== null),
+        .map((bucket) => ({
+          label: bucket.label ?? '',
+          remaining: remainingOf(bucket),
+          resetAtMs: bucket.resetAtMs,
+        }))
+        .filter((limit): limit is typeof limit & TimelineLimit => limit.remaining !== null),
     };
   }
 
@@ -513,8 +521,12 @@ export function buildTimelineLane(input: TimelineLaneInput): TimelineLane {
       periodHours: chosen.periodHours ?? null,
       remaining: remainingOf(chosen),
       limits: rows
-        .map((row) => ({ label: row.label ?? '', remaining: remainingOf(row) }))
-        .filter((limit): limit is TimelineLimit => limit.remaining !== null),
+        .map((row) => ({
+          label: row.label ?? '',
+          remaining: remainingOf(row),
+          resetAtMs: row.resetAtMs,
+        }))
+        .filter((limit): limit is typeof limit & TimelineLimit => limit.remaining !== null),
     };
   }
 
@@ -556,8 +568,9 @@ export function buildTimelineLane(input: TimelineLaneInput): TimelineLane {
         .map((window) => ({
           label: `meta_quota.${window.id}`,
           remaining: remainingOf(window),
+          resetAtMs: window.resetAtMs,
         }))
-        .filter((limit): limit is TimelineLimit => limit.remaining !== null),
+        .filter((limit): limit is typeof limit & TimelineLimit => limit.remaining !== null),
     };
   }
 

@@ -2,7 +2,8 @@
  * 额度查询页：提供商 tabs + 统一卡网格。
  *
  * 保留的行为契约（重设计不改）：
- * - 现有提供商保持点击加载；Devin 首次可见时主动查询一次，不轮询；
+ * - Live defaults on and refreshes all enabled accounts through a paced queue;
+ *   with Live off, existing manual loading and Devin's initial load remain available.
  * - cacheGeneration 会话隔离 + request-id 去重（见 useQuotaBatchLoader）；
  * - 文件列表变化后按 provider 剪枝额度缓存（已删文件不残留）；
  * - useHeaderRefresh 单槽位：本页唯一注册者，全局刷新 = 重取文件列表。
@@ -50,6 +51,8 @@ import type { QuotaProviderType } from './providers/types';
 import { useDevinQuotaAutoLoad } from './providers/devin/useDevinQuotaAutoLoad';
 import { useQuotaActions } from './hooks/useQuotaActions';
 import { useQuotaBatchLoader } from './hooks/useQuotaBatchLoader';
+import { useQuotaLive } from './hooks/useQuotaLive';
+import { QuotaOverview } from './components/QuotaOverview';
 import { readQuotaUiState, writeQuotaUiState } from './uiState';
 import styles from './QuotaPage.module.scss';
 
@@ -87,34 +90,37 @@ export function QuotaPage() {
   const sessionGeneration = useQuotaStore((state) => state.cacheGeneration);
   const [filesGeneration, setFilesGeneration] = useState<number | null>(null);
   const listRequestRef = useRef(0);
-  const loadFiles = useCallback(async () => {
-    const requestId = ++listRequestRef.current;
-    if (connectionStatus !== 'connected') {
-      setFiles([]);
-      setFilesGeneration(null);
-      setLoading(false);
-      return;
-    }
-    const isCurrent = () =>
-      requestId === listRequestRef.current &&
-      sessionGeneration === useQuotaStore.getState().cacheGeneration;
-    setLoading(true);
-    setError('');
-    try {
-      const data = await authFilesApi.list();
-      if (!isCurrent()) return;
-      setFiles(data?.files || []);
-      setFilesGeneration(sessionGeneration);
-    } catch (err: unknown) {
-      if (!isCurrent()) return;
-      const message = err instanceof Error ? err.message : t('notification.refresh_failed');
-      setError(message);
-    } finally {
-      if (isCurrent()) setLoading(false);
-    }
-  }, [connectionStatus, sessionGeneration, t]);
+  const loadFiles = useCallback(
+    async (background = false) => {
+      const requestId = ++listRequestRef.current;
+      if (connectionStatus !== 'connected') {
+        setFiles([]);
+        setFilesGeneration(null);
+        setLoading(false);
+        return;
+      }
+      const isCurrent = () =>
+        requestId === listRequestRef.current &&
+        sessionGeneration === useQuotaStore.getState().cacheGeneration;
+      if (!background) setLoading(true);
+      setError('');
+      try {
+        const data = await authFilesApi.list();
+        if (!isCurrent()) return;
+        setFiles(data?.files || []);
+        setFilesGeneration(sessionGeneration);
+      } catch (err: unknown) {
+        if (!isCurrent()) return;
+        const message = err instanceof Error ? err.message : t('notification.refresh_failed');
+        setError(message);
+      } finally {
+        if (isCurrent()) setLoading(false);
+      }
+    },
+    [connectionStatus, sessionGeneration, t]
+  );
 
-  useHeaderRefresh(loadFiles);
+  useHeaderRefresh(useCallback(() => loadFiles(), [loadFiles]));
 
   useEffect(() => {
     void loadFiles();
@@ -252,6 +258,19 @@ export function QuotaPage() {
 
   const { batchLoading, loadQuota } = useQuotaBatchLoader();
   const { resettingQuotaName, refreshQuota, resetQuota } = useQuotaActions(disableControls);
+  const { live, setLive } = useQuotaLive({
+    entries,
+    ready: !disableControls && !loading && !error && filesGeneration === sessionGeneration,
+    connected: !disableControls,
+    busy:
+      loading ||
+      batchLoading ||
+      resettingQuotaName !== null ||
+      entries.some((entry) => getQuota(entry)?.status === 'loading'),
+    generation: sessionGeneration,
+    loadQuota: (targets) => loadQuota(targets, { background: true }),
+    refreshFiles: () => loadFiles(true),
+  });
 
   const pendingRefreshRef = useRef<number | null>(null);
   const prevLoadingRef = useRef(loading);
@@ -291,7 +310,8 @@ export function QuotaPage() {
 
   useDevinQuotaAutoLoad(
     pageItems,
-    disableControls ||
+    live ||
+      disableControls ||
       loading ||
       batchLoading ||
       Boolean(error) ||
@@ -332,7 +352,13 @@ export function QuotaPage() {
         refreshing={loading || batchLoading}
         disableControls={disableControls}
         onRefreshAll={handleRefreshAll}
+        live={live}
+        onLiveChange={setLive}
       />
+
+      {!loading && !error && filesGeneration === sessionGeneration && (
+        <QuotaOverview entries={entries} quotaFor={getQuota} />
+      )}
 
       <section className={styles.workbench}>
         {/* 提供商导航与搜索工具栏分层，避免不同控件争夺视觉焦点。 */}

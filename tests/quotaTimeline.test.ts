@@ -276,8 +276,8 @@ describe('buildTimelineLane', () => {
 
     // Every limit is still summarized in the lane head regardless of the pick.
     expect(weekly.limits).toEqual([
-      { label: '7-day', remaining: 7 },
-      { label: '5-hour', remaining: 80 },
+      { label: '7-day', remaining: 7, resetAtMs: later },
+      { label: '5-hour', remaining: 80, resetAtMs: soon },
     ]);
   });
 
@@ -367,8 +367,8 @@ describe('buildTimelineLane', () => {
     expect(lane.anchorMs).toBe(5000);
     expect(lane.remaining).toBe(46);
     expect(lane.limits).toEqual([
-      { label: 'Daily', remaining: 46 },
-      { label: 'Monthly', remaining: 73 },
+      { label: 'Daily', remaining: 46, resetAtMs: 5000 },
+      { label: 'Monthly', remaining: 73, resetAtMs: 9000 },
     ]);
   });
 
@@ -396,8 +396,8 @@ describe('buildTimelineLane', () => {
     // remainingFraction is REMAINING, so it is not inverted.
     expect(lane.remaining).toBe(82);
     expect(lane.limits).toEqual([
-      { label: '5h', remaining: 40 },
-      { label: 'Weekly', remaining: 82 },
+      { label: '5h', remaining: 40, resetAtMs: 1000 },
+      { label: 'Weekly', remaining: 82, resetAtMs: 5000 },
     ]);
   });
 

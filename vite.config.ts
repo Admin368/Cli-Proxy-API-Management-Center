@@ -46,6 +46,12 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(getVersion())
   },
+  server: {
+    host: '127.0.0.1',
+    port: 5173,
+    strictPort: true,
+    allowedHosts: ['local.cli'],
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')

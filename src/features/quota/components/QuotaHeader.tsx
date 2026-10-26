@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { IconRefreshCw } from '@/components/ui/icons';
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { useCountUp } from '@/hooks/motion';
 import styles from './QuotaHeader.module.scss';
 
@@ -10,6 +11,8 @@ export type QuotaHeaderProps = {
   refreshing: boolean;
   disableControls: boolean;
   onRefreshAll: () => void;
+  live: boolean;
+  onLiveChange: (enabled: boolean) => void;
 };
 
 /**
@@ -55,6 +58,17 @@ export function QuotaHeader(props: QuotaHeaderProps) {
         </p>
       </div>
       <div className={styles.actions} data-reveal>
+        <div className={styles.liveControl}>
+          <ToggleSwitch
+            checked={props.live}
+            onChange={props.onLiveChange}
+            label={t('quota_management.live')}
+            ariaDescribedBy="quota-live-hint"
+          />
+          <span id="quota-live-hint" className={styles.liveHint}>
+            {t('quota_management.live_hint')}
+          </span>
+        </div>
         <button
           type="button"
           className={styles.primaryAction}

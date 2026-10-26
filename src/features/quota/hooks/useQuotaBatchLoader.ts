@@ -34,7 +34,7 @@ export function useQuotaBatchLoader() {
   const requestIdRef = useRef(0);
 
   const loadQuota = useCallback(
-    async (targets: QuotaFileEntry[]) => {
+    async (targets: QuotaFileEntry[], options: { background?: boolean } = {}) => {
       if (loadingRef.current) return;
       if (targets.length === 0) return;
       loadingRef.current = true;
@@ -55,15 +55,16 @@ export function useQuotaBatchLoader() {
             const adapter = QUOTA_ADAPTERS[type];
             const setQuota = getQuotaSetter(adapter);
 
-            commitIfQuotaCacheCurrent(cacheGeneration, () => {
-              setQuota((prev) => {
-                const nextState = { ...prev };
-                entries.forEach(({ file }) => {
-                  nextState[getQuotaCacheKey(file)] = adapter.buildLoadingState();
+            if (!options.background)
+              commitIfQuotaCacheCurrent(cacheGeneration, () => {
+                setQuota((prev) => {
+                  const nextState = { ...prev };
+                  entries.forEach(({ file }) => {
+                    nextState[getQuotaCacheKey(file)] = adapter.buildLoadingState();
+                  });
+                  return nextState;
                 });
-                return nextState;
               });
-            });
 
             const results = await Promise.all(
               entries.map(async ({ file }): Promise<BatchFetchResult> => {
