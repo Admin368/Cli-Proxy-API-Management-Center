@@ -1,16 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import type { AuthFileItem } from '@/types';
 import { toneForSuccessRate } from '@/features/dashboard/utils';
+import { quotaRequestTotals } from '../requestSummary';
 import styles from './QuotaRequestSummary.module.scss';
-
-export function quotaRequestTotals(files: AuthFileItem[]) {
-  const count = (value: number | undefined) =>
-    typeof value === 'number' && Number.isFinite(value) ? Math.max(0, value) : 0;
-  const success = files.reduce((sum, file) => sum + count(file.successCount), 0);
-  const failure = files.reduce((sum, file) => sum + count(file.failureCount), 0);
-  const total = success + failure;
-  return { success, failure, total, rate: total > 0 ? (success / total) * 100 : null };
-}
 
 export function QuotaRequestSummary({ files, ready }: { files: AuthFileItem[]; ready: boolean }) {
   const { t, i18n } = useTranslation();

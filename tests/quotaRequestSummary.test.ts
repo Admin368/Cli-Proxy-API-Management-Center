@@ -2,10 +2,8 @@ import { expect, test } from 'bun:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import '@/i18n';
-import {
-  QuotaRequestSummary,
-  quotaRequestTotals,
-} from '@/features/quota/components/QuotaRequestSummary';
+import { QuotaRequestSummary } from '@/features/quota/components/QuotaRequestSummary';
+import { quotaRequestTotals } from '@/features/quota/requestSummary';
 
 test('request success rate weights account totals rather than averaging account percentages', () => {
   expect(
