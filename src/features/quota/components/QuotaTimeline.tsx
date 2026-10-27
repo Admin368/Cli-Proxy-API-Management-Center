@@ -334,17 +334,20 @@ export function QuotaTimeline({
               defaultValue: 'manual reset expiry',
             })}
           </span>
-          <span className={styles.legendNote}>
-            {mode === 'weekly'
-              ? t('quota_management.windows_note_weekly', {
-                  defaultValue:
-                    'Each bar is one full quota window, drawn from when it opened to when it resets. Lanes ending together compete for the same days.',
-                })
-              : t('quota_management.windows_note_session', {
-                  defaultValue:
-                    'Each bar is one 5-hour window. Only credentials with a window counting down can be projected; the rest stay empty rather than invented.',
-                })}
-          </span>
+          <details className={styles.legendNote}>
+            <summary>{t('quota_management.windows_guide')}</summary>
+            <p>
+              {mode === 'weekly'
+                ? t('quota_management.windows_note_weekly', {
+                    defaultValue:
+                      'Each bar is one full quota window, drawn from when it opened to when it resets. Lanes ending together compete for the same days.',
+                  })
+                : t('quota_management.windows_note_session', {
+                    defaultValue:
+                      'Each bar is one 5-hour window. Only credentials with a window counting down can be projected; the rest stay empty rather than invented.',
+                  })}
+            </p>
+          </details>
         </footer>
       )}
     </section>

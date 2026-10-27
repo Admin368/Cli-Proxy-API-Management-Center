@@ -1595,6 +1595,7 @@
     "timeline_waiting_hint": "Keep Live on or refresh account details to load reset times for these accounts.",
     "timeline_page": "Timeline page {{current}} of {{total}}",
     "live": "Live",
+    "windows_guide": "Chart guide",
     "request_summary_scope": "Quota credentials · recorded totals",
     "request_summary_empty": "No recorded requests",
     "refresh_interval": "Quota refresh interval",

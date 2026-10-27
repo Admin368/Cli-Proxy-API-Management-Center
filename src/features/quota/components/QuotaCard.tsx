@@ -3,7 +3,7 @@
  * Claude observations remain visible while refreshing or after a failed read.
  */
 
-import { useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconRefreshCw } from '@/components/ui/icons';
 import type { ClaudeQuotaState, ResolvedTheme } from '@/types';
@@ -24,6 +24,7 @@ import { hasClaudeUsageData } from '../providers/claude/data';
 import bodyStyles from './QuotaBody.module.scss';
 import styles from './QuotaCard.module.scss';
 import { QuotaSnapshotNotice } from './QuotaSnapshotNotice';
+import { QuotaCardRequests } from './QuotaCardRequests';
 
 /** Bind the quota-page styles to the shared rendering contract. */
 const quotaClasses = bindQuotaClasses(bodyStyles, 'QuotaBody.module.scss');
@@ -38,6 +39,8 @@ export type QuotaCardProps = {
   entranceDelayMs?: number | null;
   onRefresh: () => void;
   onReset: () => void;
+  requestDataReady?: boolean;
+  accountActions?: ReactNode;
 };
 
 export function QuotaCard(props: QuotaCardProps) {
@@ -139,6 +142,10 @@ export function QuotaCard(props: QuotaCardProps) {
         </span>
       </header>
 
+      {props.requestDataReady !== undefined && (
+        <QuotaCardRequests file={file} ready={props.requestDataReady} />
+      )}
+
       <div className={styles.body}>
         <QuotaSnapshotNotice quota={quota} />
         {status === 'idle' ? (
@@ -228,6 +235,7 @@ export function QuotaCard(props: QuotaCardProps) {
           </button>
         </footer>
       )}
+      {props.accountActions}
     </article>
   );
 }

@@ -434,8 +434,13 @@ $lane-width: 210px;
 }
 
 .legendNote {
-  flex: 1 1 320px;
   min-width: 0;
+  summary {
+    cursor: pointer;
+  }
+  p {
+    margin: 6px 0 0;
+  }
 }
 
 @include mobile {

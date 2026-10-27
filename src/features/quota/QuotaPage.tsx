@@ -52,6 +52,7 @@ import { useDevinQuotaAutoLoad } from './providers/devin/useDevinQuotaAutoLoad';
 import { useQuotaActions } from './hooks/useQuotaActions';
 import { useQuotaBatchLoader } from './hooks/useQuotaBatchLoader';
 import { useQuotaLive } from './hooks/useQuotaLive';
+import { useQuotaAccountTools } from './hooks/useQuotaAccountTools';
 import { QuotaTimeline } from './components/QuotaTimeline';
 import { readQuotaUiState, writeQuotaUiState } from './uiState';
 import {
@@ -333,6 +334,15 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
   /* ---------- 加载与操作 ---------- */
 
   const { resettingQuotaName, refreshQuota, resetQuota } = useQuotaActions(disableControls);
+  const reloadAccounts = useCallback(() => loadFiles(true), [loadFiles]);
+  const accountTools = useQuotaAccountTools(
+    disableControls ||
+      loading ||
+      batchLoading ||
+      Boolean(error) ||
+      filesGeneration !== sessionGeneration,
+    reloadAccounts
+  );
   const { live, setLive } = useQuotaLive({
     entries,
     ready: !disableControls && !loading && !error && filesGeneration === sessionGeneration,
@@ -340,6 +350,7 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
     busy:
       loading ||
       batchLoading ||
+      accountTools.busy ||
       resettingQuotaName !== null ||
       entries.some(
         (entry) => quotaByType[entry.type][getQuotaCacheKey(entry.file)]?.status === 'loading'
@@ -544,8 +555,12 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
                 key={`${entry.type}:${getQuotaCacheKey(entry.file)}`}
                 entry={entry}
                 quota={getQuota(entry)}
+                requestDataReady={filesGeneration === sessionGeneration && !error}
+                accountActions={accountTools.actionsFor(entry.file)}
                 resolvedTheme={resolvedTheme}
-                canRefresh={canUseActions && !batchLoading && !entry.file.disabled}
+                canRefresh={
+                  canUseActions && !batchLoading && !accountTools.busy && !entry.file.disabled
+                }
                 resetting={resettingQuotaName === getQuotaCacheKey(entry.file)}
                 entranceDelayMs={cardEntranceDelay(index)}
                 onRefresh={() => void refreshQuota(entry.file, QUOTA_ADAPTERS[entry.type])}
@@ -601,6 +616,7 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
           </div>
         )}
       </section>
+      {accountTools.dialogs}
     </div>
   );
 }
