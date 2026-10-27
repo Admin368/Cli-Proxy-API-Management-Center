@@ -22,6 +22,46 @@ const baseProps = {
 };
 
 describe('QuotaTimeline rendering', () => {
+  test('Claude five-hour quota stays visible at 100% without an upstream reset time', () => {
+    const markup = renderToStaticMarkup(
+      createElement(QuotaTimeline, {
+        ...baseProps,
+        fixedMode: 'session',
+        quotaFor: () => ({
+          status: 'success',
+          windows: [
+            { id: 'five-hour', label: '5-hour', usedPercent: 0, resetAtMs: null, periodHours: 5 },
+            {
+              id: 'weekly',
+              label: '7-day',
+              usedPercent: 44,
+              resetAtMs: baseProps.now + 86400000,
+              periodHours: 168,
+            },
+          ],
+        }),
+      })
+    );
+    expect(markup).toContain('weekly-only.json');
+    expect(markup).toContain('100%');
+    expect(markup).toContain(i18n.t('quota_management.windows_reset_unknown'));
+    expect(markup).not.toContain('windowLive');
+  });
+
+  test('a disabled Claude with no reading still has an explicit row in the day view', () => {
+    const markup = renderToStaticMarkup(
+      createElement(QuotaTimeline, {
+        ...baseProps,
+        fixedMode: 'session',
+        entries: [
+          { type: 'claude', file: { name: 'paused-fixture.json', type: 'claude', disabled: true } },
+        ],
+        quotaFor: () => undefined,
+      })
+    );
+    expect(markup).toContain('paused-fixture.json');
+    expect(markup).toContain(i18n.t('quota_management.windows_no_reading'));
+  });
   test('dedicated five-hour chart shows one day with 24 hourly labels and no zoom toggle', () => {
     const markup = renderToStaticMarkup(
       createElement(QuotaTimeline, {

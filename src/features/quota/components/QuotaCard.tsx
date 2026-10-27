@@ -77,7 +77,7 @@ export function QuotaCard(props: QuotaCardProps) {
   const claudeReset = useClaudeResetGrants(
     file,
     entry.type === 'claude' && status !== 'idle' && !cached && !disabled,
-    !canRefresh || loading || resetting,
+    disabled || !canRefresh || loading || resetting,
     quota,
     onRefresh
   );
@@ -224,7 +224,7 @@ export function QuotaCard(props: QuotaCardProps) {
               type="button"
               className={styles.actionPill}
               onClick={onReset}
-              disabled={!canRefresh || loading || resetting}
+              disabled={disabled || !canRefresh || loading || resetting}
               title={t('codex_quota.reset_button')}
             >
               <IconRefreshCw size={13} className={resetting ? styles.spinning : undefined} />

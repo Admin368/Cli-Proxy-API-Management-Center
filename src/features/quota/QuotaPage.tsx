@@ -2,7 +2,7 @@
  * 额度查询页：提供商 tabs + 统一卡网格。
  *
  * 保留的行为契约（重设计不改）：
- * - Live defaults on and refreshes all enabled accounts through a paced queue;
+ * - Live defaults on and monitors enabled and disabled accounts through a paced queue;
  *   with Live off, existing manual loading and Devin's initial load remain available.
  * - cacheGeneration 会话隔离 + request-id 去重（见 useQuotaBatchLoader）；
  * - 文件列表变化后按 provider 剪枝额度缓存（已删文件不残留）；
@@ -64,6 +64,7 @@ import {
   snapshotKey,
   sanitizeQuota,
   resolveSavedQuota,
+  savedQuotaForFile,
   type QuotaSnapshot,
 } from './snapshot';
 import styles from './QuotaPage.module.scss';
@@ -237,9 +238,8 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
         successfulReads.current.set(key, { value: current, savedAt });
         quotas[key] = { type: entry.type, identity, savedAt, value };
       } else {
-        const previous = snapshotRef.current?.quotas[key];
-        if (previous?.identity === identity && !fileGenerations[entry.file.name])
-          quotas[key] = previous;
+        const previous = savedQuotaForFile(entry.type, entry.file, snapshotRef.current);
+        if (previous && !fileGenerations[entry.file.name]) quotas[key] = previous;
       }
     }
     const next: QuotaSnapshot = { savedAt: Date.now(), files: files.map(snapshotFile), quotas };
@@ -559,9 +559,7 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
                 requestDataReady={filesGeneration === sessionGeneration && !error}
                 accountActions={accountTools.actionsFor(entry.file)}
                 resolvedTheme={resolvedTheme}
-                canRefresh={
-                  canUseActions && !batchLoading && !accountTools.busy && !entry.file.disabled
-                }
+                canRefresh={canUseActions && !batchLoading && !accountTools.busy}
                 resetting={resettingQuotaName === getQuotaCacheKey(entry.file)}
                 entranceDelayMs={cardEntranceDelay(index)}
                 onRefresh={() => void refreshQuota(entry.file, QUOTA_ADAPTERS[entry.type])}

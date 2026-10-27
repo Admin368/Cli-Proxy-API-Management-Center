@@ -74,18 +74,19 @@ view advances with the current-time marker and supports horizontal scrolling
 when hourly labels need more space. Quota values remain independent; no limits
 are averaged across accounts.
 
-Live is on by default and saved in browser local storage. It visits one enabled
-account at a time, waiting 5 seconds after completion before checking again,
-with at least 2 minutes between reads of the same account. Failures back off
-exponentially up to 15 minutes. Large account sets take longer to cycle.
-The account inventory/request totals refresh every 2 minutes. Hidden pages,
-offline browsers, disconnected sessions, and ongoing batch/reset operations
-pause new reads. Leaving the route stops scheduling; an already-started read
+Live is on by default and saved in browser local storage. It checks one account
+at a time, with at least one minute between automatic account checks and a
+default five-minute per-account interval (1–60 minutes in Config Panel). Failures
+back off up to 15 minutes, never below a longer configured interval. Large
+account sets take longer to cycle. Inventory/request totals use the configured
+interval too. Hidden or unfocused windows, offline browsers, disconnected
+sessions, and ongoing batch/reset operations pause new reads. Unmounting stops scheduling; an already-started read
 may finish using the existing session guards. Provider adapters may perform
 multiple upstream calls/enrichment for a single quota read.
 
 Turning Live off leaves explicit refresh buttons available. Live covers every
-enabled account; the manual refresh button retains its existing current-page
+account, including disabled accounts: these are read-only quota lookups and do
+not re-enable inference routing. The manual refresh button retains its current-page
 scope. Preferences are per browser origin, not synced between machines.
 
 Last successful quota observations and minimal account display identities are
@@ -96,3 +97,11 @@ removes saved snapshots. Account removal or identity changes invalidate the
 matching observation. Cached observations never authorize quota-reset actions.
 The snapshot excludes credentials, raw auth-file contents, and raw responses;
 it is display data in browser storage, not an encrypted credential vault.
+
+Disabled cards retain saved quota when available and can fetch current quota while
+remaining disabled for inference. A known status-only change can preserve its
+snapshot across a file timestamp update when filename, auth index, provider and
+public account identity still match; credential edits and unrelated identity
+changes still invalidate cached data. Claude/Codex five-hour rows remain visible
+when a reset time is missing, showing the reported remaining percentage without
+inventing a countdown or reset boundary.

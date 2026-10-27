@@ -1597,6 +1597,8 @@
     "live": "Live",
     "disabled_no_quota": "Disabled — no saved quota yet",
     "disabled_account": "Disabled",
+    "windows_reset_unknown": "Reset time not reported",
+    "windows_no_reading": "No five-hour reading yet",
     "windows_guide": "Chart guide",
     "request_summary_scope": "Quota credentials · recorded totals",
     "request_summary_empty": "No recorded requests",

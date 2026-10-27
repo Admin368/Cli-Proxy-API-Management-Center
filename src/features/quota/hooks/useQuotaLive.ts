@@ -76,7 +76,8 @@ export function useQuotaLive(options: Options) {
           return;
         }
         if (!current.ready) return;
-        const eligible = current.entries.filter((entry) => !entry.file.disabled);
+        // Disabled accounts remain eligible for read-only quota monitoring.
+        const eligible = current.entries;
         const keyFor = (entry: QuotaFileEntry) => `${entry.type}:${getQuotaCacheKey(entry.file)}`;
         const activeQueue = queue.current.value;
         const key = activeQueue.next(eligible.map(keyFor), Date.now());

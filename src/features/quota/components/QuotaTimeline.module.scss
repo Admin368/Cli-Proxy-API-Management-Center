@@ -42,6 +42,10 @@ $lane-width: 210px;
       min-height: 38px;
     }
 
+    .laneIdle {
+      left: 180px;
+    }
+
     // Percentages remain visible in the cards above; keep the chart lanes focused on time.
     .laneLimits {
       position: absolute;
@@ -395,7 +399,8 @@ $lane-width: 210px;
 }
 
 .laneIdle {
-  position: relative;
+  position: sticky;
+  left: $lane-width + 10px;
   z-index: 2;
   padding-left: 10px;
   font-size: 11px;

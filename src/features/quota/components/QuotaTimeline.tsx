@@ -132,8 +132,15 @@ export function QuotaTimeline({
             maxPeriodHours: mode === 'session' ? 5 : span.days * 24,
           })
         )
-        .filter((lane) => laneHasWindow(lane) && (mode !== 'session' || lane.periodHours === 5)),
-    [laneInputs, mode, span.days]
+        .filter((lane) =>
+          mode === 'session'
+            ? lane.periodHours === 5 ||
+              (fixedMode === 'session' &&
+                ['claude', 'codex'].includes(lane.provider) &&
+                lane.anchorMs === null)
+            : laneHasWindow(lane) || (fixedMode === 'weekly' && lane.periodHours !== null)
+        ),
+    [laneInputs, mode, span.days, fixedMode]
   );
 
   /** Hourly ticks follow elapsed hours, including 23/25-hour daylight-saving days. */
@@ -435,10 +442,13 @@ function Lane({ lane, span, now, mode, cells, nowPercent, resolvedTheme }: LaneP
         )}
 
         {windows.length === 0 ? (
-          <span className={styles.laneIdle}>
-            {t('quota_management.windows_idle', {
-              defaultValue: 'no window counting down',
-            })}
+          <span className={styles.laneIdle} role="status">
+            {lane.remaining !== null && <b>{lane.remaining}% · </b>}
+            {lane.anchorMs === null && lane.periodHours !== null
+              ? t('quota_management.windows_reset_unknown')
+              : mode === 'session' && lane.periodHours === null
+                ? t('quota_management.windows_no_reading')
+                : t('quota_management.windows_idle', { defaultValue: 'no window counting down' })}
           </span>
         ) : (
           windows.map((window) => {

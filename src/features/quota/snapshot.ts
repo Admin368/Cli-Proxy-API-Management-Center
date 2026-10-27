@@ -122,7 +122,7 @@ export function quotaSnapshotScope(apiBase: string, managementKey: string): stri
 }
 
 const fileSchema: Schema = {
-  ...fields('name type provider quotaProvider quotaPluginId', 'string'),
+  ...fields('name type provider quotaProvider quotaPluginId email projectId', 'string'),
   ...fields('supportsQuota disabled', 'boolean'),
   ...fields('modified success failed', 'number'),
 };
@@ -151,6 +151,39 @@ export type QuotaSnapshot = {
   >;
 };
 
+/** A status-only change may update file mtime; retain a clearly cached observation for the same public identity. */
+export function savedQuotaForFile(
+  type: QuotaProviderType,
+  file: AuthFileItem,
+  snapshot: QuotaSnapshot | null
+) {
+  const saved = snapshot?.quotas[snapshotKey(type, file)];
+  if (!saved) return undefined;
+  if (saved.identity === snapshotIdentity(file)) return saved;
+  const previous = snapshot?.files.find(
+    (candidate) =>
+      candidate.name === file.name &&
+      String(candidate.authIndex ?? '') === String(file.authIndex ?? '')
+  );
+  if (
+    !previous ||
+    !String(file.authIndex ?? '').trim() ||
+    (previous.disabled === true) === (file.disabled === true) ||
+    saved.identity !== snapshotIdentity(previous)
+  )
+    return undefined;
+  const sameAccount =
+    (typeof file.email === 'string' &&
+      file.email.trim().length > 0 &&
+      previous.email === file.email) ||
+    (typeof file.projectId === 'string' &&
+      file.projectId.trim().length > 0 &&
+      previous.projectId === file.projectId);
+  if (!sameAccount || previous.type !== file.type || previous.provider !== file.provider)
+    return undefined;
+  return { ...saved, identity: snapshotIdentity(file) };
+}
+
 export function resolveSavedQuota(
   type: QuotaProviderType,
   file: AuthFileItem,
@@ -160,8 +193,8 @@ export function resolveSavedQuota(
   refreshing: boolean
 ): QuotaCardState | undefined {
   if (current?.status === 'success') return current;
-  const saved = snapshot?.quotas[snapshotKey(type, file)];
-  if (!saved || saved.identity !== snapshotIdentity(file) || invalidated) return current;
+  const saved = !invalidated ? savedQuotaForFile(type, file, snapshot) : undefined;
+  if (!saved) return current;
   return {
     ...saved.value,
     cachedAt: saved.savedAt,

@@ -360,9 +360,11 @@ export function buildTimelineLane(input: TimelineLaneInput): TimelineLane {
   if (!quota || quota.status !== 'success') return empty;
 
   if (provider === 'claude' || provider === 'codex') {
-    const windows = ((quota as { windows?: WindowLike[] }).windows ?? []).filter(
-      (window) => typeof window.resetAtMs === 'number'
-    );
+    const windows = (quota as { windows?: WindowLike[] }).windows ?? [];
+    const candidates =
+      maxPeriodHours === SESSION_PERIOD_HOURS
+        ? windows.filter((window) => window.periodHours === SESSION_PERIOD_HOURS)
+        : windows;
     const preferredCodexId =
       maxPeriodHours !== undefined && maxPeriodHours <= SESSION_PERIOD_HOURS
         ? 'five-hour'
@@ -373,7 +375,7 @@ export function buildTimelineLane(input: TimelineLaneInput): TimelineLane {
     // anchored to the standard account window whenever it fits this view.
     const preferredCodexWindow =
       provider === 'codex'
-        ? windows.find(
+        ? candidates.find(
             (window) =>
               window.id === preferredCodexId &&
               typeof window.periodHours === 'number' &&
@@ -381,7 +383,17 @@ export function buildTimelineLane(input: TimelineLaneInput): TimelineLane {
               (maxPeriodHours === undefined || window.periodHours <= maxPeriodHours)
           )
         : undefined;
-    const chosen = preferredCodexWindow ?? pickLaneWindow(windows, maxPeriodHours);
+    const chosen =
+      preferredCodexWindow ??
+      pickLaneWindow(candidates, maxPeriodHours) ??
+      candidates
+        .filter(
+          (window) =>
+            typeof window.periodHours === 'number' &&
+            window.periodHours > 0 &&
+            (maxPeriodHours === undefined || window.periodHours <= maxPeriodHours)
+        )
+        .sort((a, b) => (b.periodHours ?? 0) - (a.periodHours ?? 0))[0];
     if (!chosen) return empty;
 
     const resetCredits =

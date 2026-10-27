@@ -38,9 +38,12 @@ test('disabled card remains visible and explains missing saved quota', async () 
   expect(html).toContain('disabled');
 });
 
-test('refresh-all does not issue quota requests for disabled cards', async () => {
-  const fetch = spyOn(QUOTA_ADAPTERS.claude, 'fetchQuota').mockImplementation(async () => {
-    throw new Error('Disabled credentials must not be queried');
+test('read-only quota monitoring reads disabled credentials without changing their status', async () => {
+  const fetch = spyOn(QUOTA_ADAPTERS.claude, 'fetchQuota').mockResolvedValue({
+    windows: [],
+    dollarWindows: [],
+    planType: null,
+    observedAt: '2026-10-27T12:00:00Z',
   });
   function DisabledBatch() {
     void useQuotaBatchLoader().loadQuota([{ file, type: 'claude' }]);
@@ -49,7 +52,9 @@ test('refresh-all does not issue quota requests for disabled cards', async () =>
   try {
     renderToStaticMarkup(createElement(DisabledBatch));
     await Promise.resolve();
-    expect(fetch).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0][0]).toBe(file);
+    expect(file.disabled).toBe(true);
   } finally {
     fetch.mockRestore();
   }
@@ -71,4 +76,55 @@ test('disabling an unchanged credential does not invalidate its saved observatio
     },
   };
   expect(resolveSavedQuota('claude', file, undefined, snapshot, false, false)?.cachedAt).toBe(1000);
+});
+
+test('a status-only mtime change retains the same known account, never another account or credential edit', () => {
+  const original: AuthFileItem = {
+    ...file,
+    disabled: false,
+    authIndex: 'index',
+    email: 'fixture@example.test',
+    modified: 100,
+  };
+  const value: ClaudeQuotaState = { status: 'success', windows: [] };
+  const snapshot: QuotaSnapshot = {
+    savedAt: 1000,
+    files: [original],
+    quotas: {
+      [snapshotKey('claude', original)]: {
+        identity: snapshotIdentity(original),
+        savedAt: 1000,
+        type: 'claude',
+        value,
+      },
+    },
+  };
+  const paused = { ...original, disabled: true, modified: 200 };
+  expect(resolveSavedQuota('claude', paused, undefined, snapshot, false, false)?.cachedAt).toBe(
+    1000
+  );
+  expect(resolveSavedQuota('claude', paused, undefined, snapshot, true, false)).toBeUndefined();
+  expect(
+    resolveSavedQuota(
+      'claude',
+      { ...paused, email: 'other@example.test' },
+      undefined,
+      snapshot,
+      false,
+      false
+    )
+  ).toBeUndefined();
+  expect(
+    resolveSavedQuota(
+      'claude',
+      { ...paused, authIndex: 'other-index' },
+      undefined,
+      snapshot,
+      false,
+      false
+    )
+  ).toBeUndefined();
+  expect(
+    resolveSavedQuota('claude', { ...original, modified: 200 }, undefined, snapshot, false, false)
+  ).toBeUndefined();
 });
