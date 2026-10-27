@@ -1607,6 +1607,10 @@
     }
   },
   "quota_management": {
+    "windows_title_session": "5 小時額度 · 日檢視",
+    "windows_title_weekly": "每週額度視窗",
+    "windows_span_day": "一天",
+    "windows_empty_weekly": "這些帳號暫無重設視窗。",
     "snapshot_updating": "已儲存額度 · 正在更新…",
     "snapshot_waiting": "已儲存額度 · 等待更新",
     "snapshot_failed": "更新失敗 · 顯示已儲存額度",

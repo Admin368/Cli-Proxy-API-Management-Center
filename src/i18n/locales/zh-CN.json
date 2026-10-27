@@ -1579,6 +1579,10 @@
     }
   },
   "quota_management": {
+    "windows_title_session": "5 小时额度 · 日视图",
+    "windows_title_weekly": "每周额度窗口",
+    "windows_span_day": "一天",
+    "windows_empty_weekly": "这些账号暂无重置窗口。",
     "snapshot_updating": "已保存额度 · 正在更新…",
     "snapshot_waiting": "已保存额度 · 等待刷新",
     "snapshot_failed": "刷新失败 · 显示已保存额度",

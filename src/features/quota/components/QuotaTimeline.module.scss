@@ -11,6 +11,16 @@ $lane-width: 210px;
   gap: $spacing-md;
 }
 
+.timeline[data-mode='session'] {
+  .chart {
+    overflow-x: auto;
+  }
+  .axis,
+  .lane {
+    min-width: 1026px;
+  }
+}
+
 .head {
   display: flex;
   align-items: flex-start;

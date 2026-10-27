@@ -1580,6 +1580,10 @@
     }
   },
   "quota_management": {
+    "windows_title_session": "5시간 할당량 · 일별 보기",
+    "windows_title_weekly": "주간 할당량 기간",
+    "windows_span_day": "하루",
+    "windows_empty_weekly": "이 계정의 초기화 기간이 없습니다.",
     "snapshot_updating": "저장된 할당량 · 업데이트 중…",
     "snapshot_waiting": "저장된 할당량 · 새로고침 대기",
     "snapshot_failed": "새로고침 실패 · 저장된 할당량 표시",

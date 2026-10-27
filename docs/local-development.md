@@ -65,13 +65,14 @@ startup fails.
 ## Quota home and Live
 
 The root route opens `/quota`; the previous dashboard remains at `/dashboard`.
-Choose Overview or Timeline at the top; this choice is saved per browser origin.
-Timeline compares all accounts independently of detail filters, with 20 accounts
-per timeline page, weekly/session zoom, and previous/next date navigation.
-The overview includes every quota-capable account, regardless of the detail
-filters or pagination. It preserves independent limits rather than averaging
-unrelated quotas. Unsupported or unobserved values stay unknown. Request counts
-come from each account's backend-reported totals, not a fabricated time series.
+The first section is the searchable provider quota cards, with their existing
+percentage-based colors, provider filters, sorting, and pagination. Below them
+are two independent charts: five-hour windows across one local calendar day
+with hourly labels, then the existing weekly timeline. Both use the filtered
+current page of accounts. Each chart has independent date navigation. The day
+view advances with the current-time marker and supports horizontal scrolling
+when hourly labels need more space. Quota values remain independent; no limits
+are averaged across accounts.
 
 Live is on by default and saved in browser local storage. It visits one enabled
 account at a time, waiting 5 seconds after completion before checking again,

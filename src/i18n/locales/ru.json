@@ -1583,6 +1583,10 @@
     }
   },
   "quota_management": {
+    "windows_title_session": "5-часовая квота · день",
+    "windows_title_weekly": "Недельные окна квот",
+    "windows_span_day": "один день",
+    "windows_empty_weekly": "Нет окон сброса для этих аккаунтов.",
     "snapshot_updating": "Сохранённая квота · обновление…",
     "snapshot_waiting": "Сохранённая квота · ожидание обновления",
     "snapshot_failed": "Ошибка обновления · показана сохранённая квота",

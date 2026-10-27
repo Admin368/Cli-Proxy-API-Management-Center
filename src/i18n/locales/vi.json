@@ -1536,6 +1536,10 @@
     "precise_save_recovery_required": "Không thể đọc lại kết quả lưu. Đã tạm dừng chỉnh sửa. Lưu lại để khôi phục mốc cơ sở của bản nháp, hoặc tải lại cấu hình."
   },
   "quota_management": {
+    "windows_title_session": "Hạn mức 5 giờ · xem theo ngày",
+    "windows_title_weekly": "Cửa sổ hạn mức tuần",
+    "windows_span_day": "một ngày",
+    "windows_empty_weekly": "Chưa có cửa sổ đặt lại cho các tài khoản này.",
     "snapshot_updating": "Hạn mức đã lưu · đang cập nhật…",
     "snapshot_waiting": "Hạn mức đã lưu · chờ cập nhật",
     "snapshot_failed": "Cập nhật thất bại · hiển thị hạn mức đã lưu",

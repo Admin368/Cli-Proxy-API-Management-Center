@@ -1580,6 +1580,10 @@
     }
   },
   "quota_management": {
+    "windows_title_session": "5-hour quota · day view",
+    "windows_title_weekly": "Weekly quota windows",
+    "windows_span_day": "one day",
+    "windows_empty_weekly": "No reset windows available for these accounts.",
     "snapshot_updating": "Saved quota · updating…",
     "snapshot_waiting": "Saved quota · waiting for refresh",
     "snapshot_failed": "Refresh failed · showing saved quota",

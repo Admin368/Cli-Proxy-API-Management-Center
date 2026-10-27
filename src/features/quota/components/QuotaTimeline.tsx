@@ -25,7 +25,7 @@ import {
   projectLane,
   projectResetCredits,
   timelineSpan,
-  DAY_MS,
+  HOUR_MS,
 } from '../quotaTimelineModel';
 import type { TimelineLane, TimelineMode } from '../quotaTimelineModel';
 import type { QuotaFileEntry } from '../logic';
@@ -60,6 +60,8 @@ export interface QuotaTimelineProps {
   initialMode?: TimelineMode;
   /** Injectable initial date offset for tests/screenshots; defaults to the current period. */
   initialOffset?: number;
+  /** Dedicated homepage charts keep their own zoom instead of switching modes. */
+  fixedMode?: TimelineMode;
 }
 
 export function QuotaTimeline({
@@ -70,9 +72,11 @@ export function QuotaTimeline({
   now: nowProp,
   initialMode = 'weekly',
   initialOffset = 0,
+  fixedMode,
 }: QuotaTimelineProps) {
   const { t } = useTranslation();
-  const [mode, setMode] = useState<TimelineMode>(initialMode);
+  const [selectedMode, setMode] = useState<TimelineMode>(initialMode);
+  const mode = fixedMode ?? selectedMode;
   const [offset, setOffset] = useState(initialOffset);
 
   // The clock has to advance on its own: bars are classified past/live/next
@@ -127,11 +131,11 @@ export function QuotaTimeline({
     [laneInputs, mode, span.days]
   );
 
-  /** Weekly: one cell per day. Session: one per 6 hours. */
+  /** Hourly ticks follow elapsed hours, including 23/25-hour daylight-saving days. */
   const cells = useMemo(() => {
     const zoomed = mode === 'session';
-    const count = zoomed ? span.days * 4 : span.days;
-    const cellMs = (span.endMs - span.startMs) / count;
+    const count = zoomed ? Math.round((span.endMs - span.startMs) / HOUR_MS) : span.days;
+    const cellMs = zoomed ? HOUR_MS : (span.endMs - span.startMs) / count;
     const todayStart = new Date(now).setHours(0, 0, 0, 0);
 
     return Array.from({ length: count }, (_, index) => {
@@ -146,7 +150,7 @@ export function QuotaTimeline({
         weekday: t(`quota_management.weekday_${WEEKDAY_KEYS[date.getDay()]}`, {
           defaultValue: WEEKDAY_KEYS[date.getDay()],
         }),
-        label: isDayStart ? formatDay(at) : `${pad(date.getHours())}:00`,
+        label: zoomed ? `${pad(date.getHours())}:00` : formatDay(at),
       };
     });
   }, [mode, span, now, t]);
@@ -157,21 +161,24 @@ export function QuotaTimeline({
       ? ((now - span.startMs) / (span.endMs - span.startMs)) * 100
       : null;
 
-  if (!hasAnyLane) return null;
+  if (!hasAnyLane && !fixedMode) return null;
 
   return (
-    <section className={styles.timeline}>
+    <section className={styles.timeline} data-mode={mode}>
       <header className={styles.head}>
         <div>
           <h2 className={styles.title}>
-            {t('quota_management.windows_title', { defaultValue: 'Quota windows' })}
+            {fixedMode
+              ? t(`quota_management.windows_title_${mode}`)
+              : t('quota_management.windows_title', { defaultValue: 'Quota windows' })}
           </h2>
           <p className={styles.range}>
-            {formatDay(span.startMs)} – {formatDay(span.endMs - DAY_MS)}
+            {formatDay(span.startMs)}
+            {mode === 'weekly' && ` – ${formatDay(span.endMs - 1)}`}
             {' · '}
             {mode === 'weekly'
               ? t('quota_management.windows_span_weekly', { defaultValue: 'two weeks' })
-              : t('quota_management.windows_span_session', { defaultValue: 'three days' })}
+              : t('quota_management.windows_span_day')}
             {offset === 0 &&
               ` · ${t('quota_management.windows_current', { defaultValue: 'current' })}`}
           </p>
@@ -204,32 +211,41 @@ export function QuotaTimeline({
             </button>
           </div>
 
-          <div className={styles.modes} role="group">
-            {(['weekly', 'session'] as const).map((value) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={mode === value}
-                onClick={() => {
-                  setMode(value);
-                  setOffset(0); // spans differ in size; an old offset means nothing
-                }}
-              >
-                {value === 'weekly'
-                  ? t('quota_management.windows_mode_weekly', { defaultValue: 'Weekly' })
-                  : t('quota_management.windows_mode_session', { defaultValue: '5-hour' })}
-              </button>
-            ))}
-          </div>
+          {!fixedMode && (
+            <div className={styles.modes} role="group">
+              {(['weekly', 'session'] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={mode === value}
+                  onClick={() => {
+                    setMode(value);
+                    setOffset(0); // spans differ in size; an old offset means nothing
+                  }}
+                >
+                  {value === 'weekly'
+                    ? t('quota_management.windows_mode_weekly', { defaultValue: 'Weekly' })
+                    : t('quota_management.windows_mode_session', { defaultValue: '5-hour' })}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </header>
 
-      <div className={styles.chart}>
+      <div
+        className={styles.chart}
+        tabIndex={0}
+        role="region"
+        aria-label={t(`quota_management.windows_title_${mode}`)}
+      >
         {lanes.length === 0 ? (
           <div className={styles.empty} role="status">
-            {t('quota_management.windows_empty_session', {
-              defaultValue: 'No credentials on this page report a 5-hour quota window.',
-            })}
+            {mode === 'weekly'
+              ? t('quota_management.windows_empty_weekly')
+              : t('quota_management.windows_empty_session', {
+                  defaultValue: 'No credentials on this page report a 5-hour quota window.',
+                })}
           </div>
         ) : (
           <>
@@ -245,6 +261,7 @@ export function QuotaTimeline({
                     data-today={cell.isToday ? 1 : 0}
                     data-weekend={cell.isWeekend ? 1 : 0}
                     data-daystart={cell.isDayStart ? 1 : 0}
+                    data-hour={mode === 'session' ? formatTime(cell.at) : undefined}
                   >
                     <span className={styles.axisWeekday}>
                       {cell.isDayStart ? cell.weekday : ''}
@@ -357,8 +374,7 @@ function Lane({ lane, span, now, mode, cells, nowPercent, resolvedTheme }: LaneP
         <div className={styles.laneLimits}>
           {lane.limits.map((limit) => (
             <span key={limit.label} className={styles.laneLimit}>
-              {lane.provider === 'meta' ? t(limit.label) : limit.label}{' '}
-              <b>{limit.remaining}%</b>
+              {lane.provider === 'meta' ? t(limit.label) : limit.label} <b>{limit.remaining}%</b>
             </span>
           ))}
         </div>

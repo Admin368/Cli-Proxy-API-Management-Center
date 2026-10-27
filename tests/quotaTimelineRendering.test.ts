@@ -5,6 +5,7 @@ import '../src/i18n/index';
 import { QuotaTimeline } from '../src/features/quota/components/QuotaTimeline';
 import type { QuotaFileEntry } from '../src/features/quota/logic';
 import { buildKimiQuotaRows } from '../src/utils/quota';
+import i18n from '../src/i18n';
 
 const entries: QuotaFileEntry[] = [
   {
@@ -21,6 +22,47 @@ const baseProps = {
 };
 
 describe('QuotaTimeline rendering', () => {
+  test('dedicated five-hour chart shows one day with 24 hourly labels and no zoom toggle', () => {
+    const markup = renderToStaticMarkup(
+      createElement(QuotaTimeline, {
+        ...baseProps,
+        fixedMode: 'session',
+        quotaFor: () => ({
+          status: 'success',
+          windows: [
+            {
+              id: 'five-hour',
+              label: '5-hour',
+              usedPercent: 25,
+              resetAtMs: new Date(2026, 6, 29, 15).getTime(),
+              periodHours: 5,
+            },
+          ],
+        }),
+      })
+    );
+    expect(markup).toContain(i18n.t('quota_management.windows_title_session'));
+    expect(markup).toContain('00:00');
+    expect(markup).toContain('12:00');
+    expect(markup).toContain('23:00');
+    expect(markup.match(/data-hour=/g)).toHaveLength(24);
+    expect(markup).not.toContain('aria-pressed=');
+    expect(markup).toMatch(/tabindex="0"/i);
+  });
+
+  test('dedicated charts remain visible while quota data is pending', () => {
+    for (const mode of ['session', 'weekly'] as const) {
+      const markup = renderToStaticMarkup(
+        createElement(QuotaTimeline, {
+          ...baseProps,
+          fixedMode: mode,
+          quotaFor: () => undefined,
+        })
+      );
+      expect(markup).toContain(i18n.t(`quota_management.windows_title_${mode}`));
+      expect(markup).toContain('role="status"');
+    }
+  });
   test('shows the selected period date instead of always labelling it Today', () => {
     const markup = renderToStaticMarkup(
       createElement(QuotaTimeline, {

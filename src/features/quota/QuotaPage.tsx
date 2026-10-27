@@ -51,7 +51,7 @@ import { useDevinQuotaAutoLoad } from './providers/devin/useDevinQuotaAutoLoad';
 import { useQuotaActions } from './hooks/useQuotaActions';
 import { useQuotaBatchLoader } from './hooks/useQuotaBatchLoader';
 import { useQuotaLive } from './hooks/useQuotaLive';
-import { QuotaViews } from './components/QuotaViews';
+import { QuotaTimeline } from './components/QuotaTimeline';
 import { readQuotaUiState, writeQuotaUiState } from './uiState';
 import {
   quotaSnapshotScope,
@@ -68,6 +68,7 @@ import styles from './QuotaPage.module.scss';
 
 const TAB_IDS: string[] = ['all', ...QUOTA_TAB_ORDER];
 const SKELETON_CARD_COUNT = 6;
+const displayNameFor = (name: string) => name;
 
 export function QuotaPage() {
   const apiBase = useAuthStore((state) => state.apiBase);
@@ -438,9 +439,6 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
           )}
         </p>
       )}
-      {files.length > 0 && (filesGeneration === sessionGeneration || snapshot) && (
-        <QuotaViews entries={entries} quotaFor={getQuota} resolvedTheme={resolvedTheme} />
-      )}
 
       <section className={styles.workbench}>
         {/* 提供商导航与搜索工具栏分层，避免不同控件争夺视觉焦点。 */}
@@ -575,6 +573,24 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
             >
               {t('auth_files.pagination_next')}
             </Button>
+          </div>
+        )}
+        {pageItems.length > 0 && (
+          <div className={styles.timelines}>
+            <QuotaTimeline
+              entries={pageItems}
+              quotaFor={getQuota}
+              displayNameFor={displayNameFor}
+              resolvedTheme={resolvedTheme}
+              fixedMode="session"
+            />
+            <QuotaTimeline
+              entries={pageItems}
+              quotaFor={getQuota}
+              displayNameFor={displayNameFor}
+              resolvedTheme={resolvedTheme}
+              fixedMode="weekly"
+            />
           </div>
         )}
       </section>
