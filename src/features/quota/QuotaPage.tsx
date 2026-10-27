@@ -67,10 +67,11 @@ import {
   type QuotaSnapshot,
 } from './snapshot';
 import styles from './QuotaPage.module.scss';
+import { compactCredentialLabel } from './credentialLabel';
 
 const TAB_IDS: string[] = ['all', ...QUOTA_TAB_ORDER];
 const SKELETON_CARD_COUNT = 6;
-const displayNameFor = (name: string) => name;
+const displayNameFor = compactCredentialLabel;
 
 export function QuotaPage() {
   const apiBase = useAuthStore((state) => state.apiBase);

@@ -25,6 +25,7 @@ import bodyStyles from './QuotaBody.module.scss';
 import styles from './QuotaCard.module.scss';
 import { QuotaSnapshotNotice } from './QuotaSnapshotNotice';
 import { QuotaCardRequests } from './QuotaCardRequests';
+import { compactCredentialLabel } from '../credentialLabel';
 
 /** Bind the quota-page styles to the shared rendering contract. */
 const quotaClasses = bindQuotaClasses(bodyStyles, 'QuotaBody.module.scss');
@@ -59,7 +60,7 @@ export function QuotaCard(props: QuotaCardProps) {
   const file = entry.file;
   const retainedClaudeUsage =
     entry.type === 'claude' && hasClaudeUsageData(quota as ClaudeQuotaState | undefined);
-  const displayName = getQuotaDisplayName(file);
+  const displayName = getQuotaDisplayName({ ...file, name: compactCredentialLabel(file.name) });
 
   // Capture the entrance delay only at mount, without a render-time ref read.
   const [mountEntranceDelayMs] = useState<number | null>(entranceDelayMs ?? null);
@@ -137,7 +138,7 @@ export function QuotaCard(props: QuotaCardProps) {
             <span className={styles.iconFallback}>{typeLabel.slice(0, 1).toUpperCase()}</span>
           )}
         </span>
-        <span className={styles.fileName} title={displayName}>
+        <span className={styles.fileName} title={getQuotaDisplayName(file)}>
           {displayName}
         </span>
       </header>

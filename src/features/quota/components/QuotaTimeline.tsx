@@ -16,7 +16,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatRelativeInstant, TYPE_COLORS } from '@/utils/quota';
-import { getQuotaCacheKey, getQuotaDisplayName } from '@/utils/quota/identity';
+import {
+  getQuotaCacheKey,
+  getQuotaCacheFileName,
+  getQuotaDisplayName,
+} from '@/utils/quota/identity';
 import { useNow } from '@/hooks/useNow';
 import type { ResolvedTheme, ThemeColors } from '@/types';
 import {
@@ -31,6 +35,7 @@ import type { TimelineLane, TimelineMode } from '../quotaTimelineModel';
 import type { QuotaFileEntry } from '../logic';
 import type { QuotaCardState } from '../providers';
 import styles from './QuotaTimeline.module.scss';
+import { earliestActiveWindowStart, timelineScrollLeft } from '../timelineViewport';
 
 const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
@@ -99,7 +104,7 @@ export function QuotaTimeline({
         name: getQuotaCacheKey(entry.file),
         displayName:
           entry.type === 'devin'
-            ? getQuotaDisplayName(entry.file)
+            ? getQuotaDisplayName({ ...entry.file, name: displayNameFor(entry.file.name) })
             : displayNameFor(entry.file.name),
         provider: entry.type,
         quota: quotaFor(entry),
@@ -163,28 +168,33 @@ export function QuotaTimeline({
 
   const chartRef = useRef<HTMLDivElement>(null);
   const centeredPeriod = useRef('');
+  const autoScrollTarget =
+    mode === 'session' ? earliestActiveWindowStart(lanes, span.startMs, span.endMs, now) : null;
   useEffect(() => {
     const chart = chartRef.current;
     if (offset !== 0) centeredPeriod.current = '';
     if (!chart || lanes.length === 0 || offset !== 0 || nowPercent === null) return;
-    const period = `${mode}:${span.startMs}`;
+    const period = `${mode}:${span.startMs}:${autoScrollTarget === null ? 'pending' : 'ready'}`;
     const center = () => {
       if (centeredPeriod.current === period || chart.clientWidth === 0) return;
       const track = chart.querySelector<HTMLElement>(`.${styles.track}`);
       if (!track) return;
-      const marker =
-        track.getBoundingClientRect().left -
-        chart.getBoundingClientRect().left +
-        chart.scrollLeft +
-        (track.clientWidth * nowPercent) / 100;
-      chart.scrollLeft = Math.max(0, marker - chart.clientWidth / 2);
+      const label = chart.querySelector<HTMLElement>(`.${styles.axisLabel}`);
+      chart.scrollLeft = timelineScrollLeft(
+        mode,
+        autoScrollTarget ?? now,
+        span.startMs,
+        span.endMs,
+        track.clientWidth,
+        chart.clientWidth - (label?.clientWidth ?? 0)
+      );
       centeredPeriod.current = period;
     };
     center();
     const observer = new ResizeObserver(center);
     observer.observe(chart);
     return () => observer.disconnect();
-  }, [mode, offset, span.startMs, nowPercent, lanes.length]);
+  }, [mode, offset, span.startMs, span.endMs, now, nowPercent, lanes.length, autoScrollTarget]);
 
   if (!hasAnyLane && !fixedMode) return null;
 
@@ -395,7 +405,7 @@ function Lane({ lane, span, now, mode, cells, nowPercent, resolvedTheme }: LaneP
       <div className={styles.laneHead}>
         <div className={styles.laneTop}>
           <span className={styles.laneDot} />
-          <span className={styles.laneName} title={lane.displayName}>
+          <span className={styles.laneName} title={getQuotaCacheFileName(lane.name)}>
             {lane.displayName}
           </span>
           {periodLabel && <span className={styles.lanePeriod}>{periodLabel}</span>}
