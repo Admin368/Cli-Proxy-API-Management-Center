@@ -23,6 +23,7 @@ import { ClaudeResetGrantDetails } from '../providers/claude/ClaudeResetGrantDet
 import { hasClaudeUsageData } from '../providers/claude/data';
 import bodyStyles from './QuotaBody.module.scss';
 import styles from './QuotaCard.module.scss';
+import { QuotaSnapshotNotice } from './QuotaSnapshotNotice';
 
 /** Bind the quota-page styles to the shared rendering contract. */
 const quotaClasses = bindQuotaClasses(bodyStyles, 'QuotaBody.module.scss');
@@ -65,10 +66,11 @@ export function QuotaCard(props: QuotaCardProps) {
       : ({ '--card-delay': `${mountEntranceDelayMs}ms` } as CSSProperties);
 
   const status = quota?.status ?? 'idle';
-  const loading = status === 'loading';
+  const cached = Boolean(quota?.cachedAt);
+  const loading = status === 'loading' || Boolean(quota?.refreshing);
   const claudeReset = useClaudeResetGrants(
     file,
-    entry.type === 'claude' && status !== 'idle',
+    entry.type === 'claude' && status !== 'idle' && !cached,
     !canRefresh || loading || resetting,
     quota,
     onRefresh
@@ -105,6 +107,7 @@ export function QuotaCard(props: QuotaCardProps) {
     </>
   ) : undefined;
   const showReset =
+    !cached &&
     status === 'success' &&
     Boolean(adapter.resetQuota) &&
     quota !== undefined &&
@@ -137,6 +140,7 @@ export function QuotaCard(props: QuotaCardProps) {
       </header>
 
       <div className={styles.body}>
+        <QuotaSnapshotNotice quota={quota} />
         {status === 'idle' ? (
           <button
             type="button"
@@ -147,7 +151,7 @@ export function QuotaCard(props: QuotaCardProps) {
             <IconRefreshCw size={15} aria-hidden="true" className={styles.idleGlyph} />
             <span className={styles.idleHint}>{t(`${adapter.i18nPrefix}.idle`)}</span>
           </button>
-        ) : loading && !retainedClaudeUsage ? (
+        ) : loading && !retainedClaudeUsage && !cached ? (
           <div className={styles.skeleton} aria-busy="true">
             <span className={styles.srOnly}>{t(`${adapter.i18nPrefix}.loading`)}</span>
             {[0, 1].map((row) => (
@@ -188,7 +192,7 @@ export function QuotaCard(props: QuotaCardProps) {
 
       {status !== 'idle' && (
         <footer className={styles.actionRow}>
-          {entry.type === 'claude' && (
+          {entry.type === 'claude' && !cached && (
             <button
               type="button"
               className={styles.actionPill}

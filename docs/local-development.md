@@ -86,3 +86,12 @@ multiple upstream calls/enrichment for a single quota read.
 Turning Live off leaves explicit refresh buttons available. Live covers every
 enabled account; the manual refresh button retains its existing current-page
 scope. Preferences are per browser origin, not synced between machines.
+
+Last successful quota observations and minimal account display identities are
+saved locally for up to seven days, scoped by backend and a management-key
+fingerprint. Reloading shows those saved values immediately, with saved times
+and waiting/updating/failure labels until fresh reads replace them. Logout
+removes saved snapshots. Account removal or identity changes invalidate the
+matching observation. Cached observations never authorize quota-reset actions.
+The snapshot excludes credentials, raw auth-file contents, and raw responses;
+it is display data in browser storage, not an encrypted credential vault.

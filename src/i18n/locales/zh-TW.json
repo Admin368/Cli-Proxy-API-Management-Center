@@ -1607,6 +1607,10 @@
     }
   },
   "quota_management": {
+    "snapshot_updating": "已儲存額度 · 正在更新…",
+    "snapshot_waiting": "已儲存額度 · 等待更新",
+    "snapshot_failed": "更新失敗 · 顯示已儲存額度",
+    "snapshot_saved_at": "儲存於 {{time}}",
     "view_label": "額度檢視",
     "view_overview": "概覽",
     "view_timeline": "時間軸",

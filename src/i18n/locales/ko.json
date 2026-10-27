@@ -1580,6 +1580,10 @@
     }
   },
   "quota_management": {
+    "snapshot_updating": "저장된 할당량 · 업데이트 중…",
+    "snapshot_waiting": "저장된 할당량 · 새로고침 대기",
+    "snapshot_failed": "새로고침 실패 · 저장된 할당량 표시",
+    "snapshot_saved_at": "저장 시간 {{time}}",
     "view_label": "할당량 보기",
     "view_overview": "개요",
     "view_timeline": "타임라인",

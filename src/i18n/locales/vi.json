@@ -1536,6 +1536,10 @@
     "precise_save_recovery_required": "Không thể đọc lại kết quả lưu. Đã tạm dừng chỉnh sửa. Lưu lại để khôi phục mốc cơ sở của bản nháp, hoặc tải lại cấu hình."
   },
   "quota_management": {
+    "snapshot_updating": "Hạn mức đã lưu · đang cập nhật…",
+    "snapshot_waiting": "Hạn mức đã lưu · chờ cập nhật",
+    "snapshot_failed": "Cập nhật thất bại · hiển thị hạn mức đã lưu",
+    "snapshot_saved_at": "Đã lưu {{time}}",
     "view_label": "Chế độ xem hạn mức",
     "view_overview": "Tổng quan",
     "view_timeline": "Dòng thời gian",

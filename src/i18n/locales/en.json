@@ -1580,6 +1580,10 @@
     }
   },
   "quota_management": {
+    "snapshot_updating": "Saved quota · updating…",
+    "snapshot_waiting": "Saved quota · waiting for refresh",
+    "snapshot_failed": "Refresh failed · showing saved quota",
+    "snapshot_saved_at": "Saved {{time}}",
     "view_label": "Quota view",
     "view_overview": "Overview",
     "view_timeline": "Timeline",

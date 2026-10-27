@@ -1579,6 +1579,10 @@
     }
   },
   "quota_management": {
+    "snapshot_updating": "已保存额度 · 正在更新…",
+    "snapshot_waiting": "已保存额度 · 等待刷新",
+    "snapshot_failed": "刷新失败 · 显示已保存额度",
+    "snapshot_saved_at": "保存于 {{time}}",
     "view_label": "额度视图",
     "view_overview": "概览",
     "view_timeline": "时间线",

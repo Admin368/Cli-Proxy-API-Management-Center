@@ -7,6 +7,7 @@ import type { QuotaFileEntry } from '../logic';
 import type { QuotaCardState } from '../providers';
 import { buildTimelineLane } from '../quotaTimelineModel';
 import styles from './QuotaOverview.module.scss';
+import { QuotaSnapshotNotice } from './QuotaSnapshotNotice';
 
 export function QuotaOverview({
   entries,
@@ -63,6 +64,7 @@ export function QuotaOverview({
                 <span className={styles.provider}>{entry.type}</span>
                 <strong className={styles.name}>{name}</strong>
               </header>
+              <QuotaSnapshotNotice quota={quota} />
               {limits.some(
                 (limit) =>
                   Number.isFinite(limit.remaining) &&

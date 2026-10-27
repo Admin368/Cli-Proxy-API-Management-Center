@@ -30,6 +30,7 @@ interface BatchFetchResult {
 export function useQuotaBatchLoader() {
   const { t } = useTranslation();
   const [batchLoading, setBatchLoading] = useState(false);
+  const [refreshingKeys, setRefreshingKeys] = useState<Set<string>>(new Set());
   const loadingRef = useRef(false);
   const requestIdRef = useRef(0);
 
@@ -41,6 +42,9 @@ export function useQuotaBatchLoader() {
       const requestId = ++requestIdRef.current;
       const cacheGeneration = captureQuotaCacheGeneration();
       setBatchLoading(true);
+      setRefreshingKeys(
+        new Set(targets.map((entry) => `${entry.type}:${getQuotaCacheKey(entry.file)}`))
+      );
 
       try {
         const groups = new Map<QuotaProviderType, QuotaFileEntry[]>();
@@ -119,6 +123,7 @@ export function useQuotaBatchLoader() {
       } finally {
         if (requestId === requestIdRef.current) {
           setBatchLoading(false);
+          setRefreshingKeys(new Set());
           loadingRef.current = false;
         }
       }
@@ -126,5 +131,5 @@ export function useQuotaBatchLoader() {
     [t]
   );
 
-  return { batchLoading, loadQuota };
+  return { batchLoading, loadQuota, refreshingKeys };
 }

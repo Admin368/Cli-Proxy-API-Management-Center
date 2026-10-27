@@ -53,17 +53,41 @@ import { useQuotaBatchLoader } from './hooks/useQuotaBatchLoader';
 import { useQuotaLive } from './hooks/useQuotaLive';
 import { QuotaViews } from './components/QuotaViews';
 import { readQuotaUiState, writeQuotaUiState } from './uiState';
+import {
+  quotaSnapshotScope,
+  readQuotaSnapshot,
+  writeQuotaSnapshot,
+  snapshotFile,
+  snapshotIdentity,
+  snapshotKey,
+  sanitizeQuota,
+  resolveSavedQuota,
+  type QuotaSnapshot,
+} from './snapshot';
 import styles from './QuotaPage.module.scss';
 
 const TAB_IDS: string[] = ['all', ...QUOTA_TAB_ORDER];
 const SKELETON_CARD_COUNT = 6;
 
 export function QuotaPage() {
+  const apiBase = useAuthStore((state) => state.apiBase);
+  const managementKey = useAuthStore((state) => state.managementKey);
+  const generation = useQuotaStore((state) => state.cacheGeneration);
+  const scope = quotaSnapshotScope(apiBase, managementKey);
+  return <QuotaPageContent key={`${scope}:${generation}`} snapshotScope={scope} />;
+}
+
+function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
   const { t } = useTranslation();
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
   const resolvedTheme: ResolvedTheme = useThemeStore((state) => state.resolvedTheme);
 
-  const [files, setFiles] = useState<AuthFileItem[]>([]);
+  const [snapshot, setSnapshot] = useState(() => readQuotaSnapshot(snapshotScope));
+  const snapshotRef = useRef(snapshot);
+  useEffect(() => {
+    snapshotRef.current = snapshot;
+  }, [snapshot]);
+  const [files, setFiles] = useState<AuthFileItem[]>(() => snapshot?.files ?? []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<QuotaTabId>(() => readQuotaUiState()?.tab ?? 'all');
@@ -158,10 +182,21 @@ export function QuotaPage() {
     ]
   );
 
+  const { batchLoading, loadQuota, refreshingKeys } = useQuotaBatchLoader();
+  const fileGenerations = useQuotaStore((state) => state.fileGenerations);
   const getQuota = useCallback(
-    (entry: QuotaFileEntry): QuotaCardState | undefined =>
-      quotaByType[entry.type][getQuotaCacheKey(entry.file)],
-    [quotaByType]
+    (entry: QuotaFileEntry): QuotaCardState | undefined => {
+      const current = quotaByType[entry.type][getQuotaCacheKey(entry.file)];
+      return resolveSavedQuota(
+        entry.type,
+        entry.file,
+        current,
+        snapshot,
+        Boolean(fileGenerations[entry.file.name]),
+        refreshingKeys.has(snapshotKey(entry.type, entry.file))
+      );
+    },
+    [quotaByType, snapshot, fileGenerations, refreshingKeys]
   );
 
   /* ---------- 归类 / 过滤 / 排序 / 分页 ---------- */
@@ -172,6 +207,52 @@ export function QuotaPage() {
   const sortNow = sortMode === 'default' ? 0 : tick;
 
   const entries = useMemo(() => classifyQuotaFiles(files), [files]);
+  const successfulReads = useRef(new Map<string, { value: QuotaCardState; savedAt: number }>());
+  useEffect(() => {
+    if (loading || error || disableControls || filesGeneration !== sessionGeneration) return;
+    const auth = useAuthStore.getState();
+    if (
+      auth.connectionStatus !== 'connected' ||
+      sessionGeneration !== useQuotaStore.getState().cacheGeneration ||
+      snapshotScope !== quotaSnapshotScope(auth.apiBase, auth.managementKey)
+    )
+      return;
+    const quotas: QuotaSnapshot['quotas'] = {};
+    const activeKeys = new Set(entries.map((entry) => snapshotKey(entry.type, entry.file)));
+    for (const key of successfulReads.current.keys()) {
+      if (!activeKeys.has(key)) successfulReads.current.delete(key);
+    }
+    for (const entry of entries) {
+      const key = snapshotKey(entry.type, entry.file);
+      const current = quotaByType[entry.type][getQuotaCacheKey(entry.file)];
+      const identity = snapshotIdentity(entry.file);
+      const value = sanitizeQuota(entry.type, current);
+      if (value && current) {
+        const previous = successfulReads.current.get(key);
+        const savedAt = previous?.value === current ? previous.savedAt : Date.now();
+        successfulReads.current.set(key, { value: current, savedAt });
+        quotas[key] = { type: entry.type, identity, savedAt, value };
+      } else {
+        const previous = snapshotRef.current?.quotas[key];
+        if (previous?.identity === identity && !fileGenerations[entry.file.name])
+          quotas[key] = previous;
+      }
+    }
+    const next: QuotaSnapshot = { savedAt: Date.now(), files: files.map(snapshotFile), quotas };
+    writeQuotaSnapshot(snapshotScope, next);
+    setSnapshot(next);
+  }, [
+    entries,
+    files,
+    quotaByType,
+    fileGenerations,
+    loading,
+    error,
+    disableControls,
+    filesGeneration,
+    sessionGeneration,
+    snapshotScope,
+  ]);
   const tabCounts = useMemo(() => buildTabCounts(entries), [entries]);
   const filteredEntries = useMemo(
     () => filterEntriesBySearch(filterEntriesByTab(entries, tab), search),
@@ -249,7 +330,6 @@ export function QuotaPage() {
 
   /* ---------- 加载与操作 ---------- */
 
-  const { batchLoading, loadQuota } = useQuotaBatchLoader();
   const { resettingQuotaName, refreshQuota, resetQuota } = useQuotaActions(disableControls);
   const { live, setLive } = useQuotaLive({
     entries,
@@ -259,7 +339,9 @@ export function QuotaPage() {
       loading ||
       batchLoading ||
       resettingQuotaName !== null ||
-      entries.some((entry) => getQuota(entry)?.status === 'loading'),
+      entries.some(
+        (entry) => quotaByType[entry.type][getQuotaCacheKey(entry.file)]?.status === 'loading'
+      ),
     generation: sessionGeneration,
     loadQuota: (targets) => loadQuota(targets, { background: true }),
     refreshFiles: () => loadFiles(true),
@@ -349,7 +431,14 @@ export function QuotaPage() {
         onLiveChange={setLive}
       />
 
-      {!loading && !error && filesGeneration === sessionGeneration && (
+      {entries.some((entry) => getQuota(entry)?.cachedAt) && (
+        <p role="status" className={styles.cacheStatus}>
+          {t(
+            `quota_management.${loading || batchLoading ? 'snapshot_updating' : 'snapshot_waiting'}`
+          )}
+        </p>
+      )}
+      {files.length > 0 && (filesGeneration === sessionGeneration || snapshot) && (
         <QuotaViews entries={entries} quotaFor={getQuota} resolvedTheme={resolvedTheme} />
       )}
 
@@ -409,7 +498,7 @@ export function QuotaPage() {
           </div>
         )}
 
-        {loading ? (
+        {loading && files.length === 0 ? (
           <div className={styles.grid} aria-hidden="true">
             {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
               <Skeleton key={index} height={168} rounded={14} />
@@ -451,7 +540,7 @@ export function QuotaPage() {
                 entry={entry}
                 quota={getQuota(entry)}
                 resolvedTheme={resolvedTheme}
-                canRefresh={canUseActions && !entry.file.disabled}
+                canRefresh={canUseActions && !batchLoading && !entry.file.disabled}
                 resetting={resettingQuotaName === getQuotaCacheKey(entry.file)}
                 entranceDelayMs={cardEntranceDelay(index)}
                 onRefresh={() => void refreshQuota(entry.file, QUOTA_ADAPTERS[entry.type])}

@@ -1583,6 +1583,10 @@
     }
   },
   "quota_management": {
+    "snapshot_updating": "Сохранённая квота · обновление…",
+    "snapshot_waiting": "Сохранённая квота · ожидание обновления",
+    "snapshot_failed": "Ошибка обновления · показана сохранённая квота",
+    "snapshot_saved_at": "Сохранено {{time}}",
     "view_label": "Вид квот",
     "view_overview": "Обзор",
     "view_timeline": "Временная шкала",
