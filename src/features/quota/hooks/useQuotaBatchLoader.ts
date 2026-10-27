@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { captureQuotaCacheGeneration, commitIfQuotaCacheCurrent } from '@/stores';
 import { getStatusFromError } from '@/utils/quota';
 import { getQuotaCacheKey } from '@/utils/quota/identity';
+import { isDisabledAuthFile } from '@/utils/quota/validators';
 import type { QuotaFileEntry } from '../logic';
 import { QUOTA_ADAPTERS, getQuotaSetter, type QuotaCardState } from '../providers';
 import { enrichQuotaInBackground } from '../quotaEnrichment';
@@ -37,18 +38,19 @@ export function useQuotaBatchLoader() {
   const loadQuota = useCallback(
     async (targets: QuotaFileEntry[], options: { background?: boolean } = {}) => {
       if (loadingRef.current) return;
-      if (targets.length === 0) return;
+      const enabledTargets = targets.filter((entry) => !isDisabledAuthFile(entry.file));
+      if (enabledTargets.length === 0) return;
       loadingRef.current = true;
       const requestId = ++requestIdRef.current;
       const cacheGeneration = captureQuotaCacheGeneration();
       setBatchLoading(true);
       setRefreshingKeys(
-        new Set(targets.map((entry) => `${entry.type}:${getQuotaCacheKey(entry.file)}`))
+        new Set(enabledTargets.map((entry) => `${entry.type}:${getQuotaCacheKey(entry.file)}`))
       );
 
       try {
         const groups = new Map<QuotaProviderType, QuotaFileEntry[]>();
-        targets.forEach((entry) => {
+        enabledTargets.forEach((entry) => {
           const group = groups.get(entry.type) ?? [];
           group.push(entry);
           groups.set(entry.type, group);

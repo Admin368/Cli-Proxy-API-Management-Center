@@ -1595,6 +1595,8 @@
     "timeline_waiting_hint": "실시간을 켜거나 계정 세부 정보를 새로고침하여 초기화 시간을 불러오세요.",
     "timeline_page": "타임라인 {{current}} / {{total}} 페이지",
     "live": "실시간",
+    "disabled_no_quota": "비활성 — 저장된 할당량 없음",
+    "disabled_account": "비활성",
     "windows_guide": "차트 안내",
     "request_summary_scope": "할당량 계정 · 기록된 누적 합계",
     "request_summary_empty": "기록된 요청 없음",

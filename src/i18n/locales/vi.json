@@ -1551,6 +1551,8 @@
     "timeline_waiting_hint": "Bật Trực tiếp hoặc cập nhật chi tiết tài khoản để tải thời gian đặt lại.",
     "timeline_page": "Trang dòng thời gian {{current}} / {{total}}",
     "live": "Trực tiếp",
+    "disabled_no_quota": "Đã tắt — chưa có hạn mức đã lưu",
+    "disabled_account": "Đã tắt",
     "windows_guide": "Hướng dẫn biểu đồ",
     "request_summary_scope": "Thông tin xác thực hạn mức · tổng đã ghi nhận",
     "request_summary_empty": "Chưa có yêu cầu được ghi nhận",

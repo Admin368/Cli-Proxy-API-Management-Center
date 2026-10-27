@@ -26,6 +26,7 @@ import styles from './QuotaCard.module.scss';
 import { QuotaSnapshotNotice } from './QuotaSnapshotNotice';
 import { QuotaCardRequests } from './QuotaCardRequests';
 import { compactCredentialLabel } from '../credentialLabel';
+import { isDisabledAuthFile } from '@/utils/quota/validators';
 
 /** Bind the quota-page styles to the shared rendering contract. */
 const quotaClasses = bindQuotaClasses(bodyStyles, 'QuotaBody.module.scss');
@@ -58,6 +59,7 @@ export function QuotaCard(props: QuotaCardProps) {
   const { t } = useTranslation();
   const adapter = QUOTA_ADAPTERS[entry.type];
   const file = entry.file;
+  const disabled = isDisabledAuthFile(file);
   const retainedClaudeUsage =
     entry.type === 'claude' && hasClaudeUsageData(quota as ClaudeQuotaState | undefined);
   const displayName = getQuotaDisplayName({ ...file, name: compactCredentialLabel(file.name) });
@@ -74,7 +76,7 @@ export function QuotaCard(props: QuotaCardProps) {
   const loading = status === 'loading' || Boolean(quota?.refreshing);
   const claudeReset = useClaudeResetGrants(
     file,
-    entry.type === 'claude' && status !== 'idle' && !cached,
+    entry.type === 'claude' && status !== 'idle' && !cached && !disabled,
     !canRefresh || loading || resetting,
     quota,
     onRefresh
@@ -141,6 +143,9 @@ export function QuotaCard(props: QuotaCardProps) {
         <span className={styles.fileName} title={getQuotaDisplayName(file)}>
           {displayName}
         </span>
+        {disabled && (
+          <span className={styles.disabledBadge}>{t('quota_management.disabled_account')}</span>
+        )}
       </header>
 
       {props.requestDataReady !== undefined && (
@@ -157,7 +162,9 @@ export function QuotaCard(props: QuotaCardProps) {
             disabled={!canRefresh}
           >
             <IconRefreshCw size={15} aria-hidden="true" className={styles.idleGlyph} />
-            <span className={styles.idleHint}>{t(`${adapter.i18nPrefix}.idle`)}</span>
+            <span className={styles.idleHint}>
+              {disabled ? t('quota_management.disabled_no_quota') : t(`${adapter.i18nPrefix}.idle`)}
+            </span>
           </button>
         ) : loading && !retainedClaudeUsage && !cached ? (
           <div className={styles.skeleton} aria-busy="true">
