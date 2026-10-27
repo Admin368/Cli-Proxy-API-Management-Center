@@ -21,6 +21,17 @@
     box-shadow var(--dur-hover, 200ms) var(--ease-out-strong, ease-out);
 }
 
+@media (min-width: 1100px) {
+  .card {
+    gap: 5px;
+    padding: 8px 12px;
+  }
+
+  .card .body {
+    gap: 4px;
+  }
+}
+
 @media (hover: hover) and (pointer: fine) {
   .card:hover {
     transform: translateY(-2px);

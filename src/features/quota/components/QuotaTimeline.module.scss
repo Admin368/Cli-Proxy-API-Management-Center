@@ -11,6 +11,52 @@ $lane-width: 210px;
   gap: $spacing-md;
 }
 
+@media (min-width: 1100px) {
+  .timeline {
+    min-width: 0;
+    gap: 8px;
+
+    .head {
+      gap: 6px 10px;
+    }
+
+    .title {
+      font-size: 16px;
+    }
+
+    .chart {
+      overflow-x: auto;
+    }
+
+    .axis,
+    .lane {
+      min-width: 720px;
+      grid-template-columns: 170px 1fr;
+    }
+
+    .laneHead {
+      padding: 6px 8px;
+    }
+
+    .track {
+      min-height: 38px;
+    }
+
+    // Percentages remain visible in the cards above; keep the chart lanes focused on time.
+    .laneLimits {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    .legend {
+      gap: 6px 12px;
+    }
+  }
+}
+
 .timeline[data-mode='session'] {
   .chart {
     overflow-x: auto;
