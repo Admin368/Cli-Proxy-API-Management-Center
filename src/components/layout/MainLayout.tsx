@@ -353,6 +353,7 @@ export function MainLayout() {
   const abbrBrandName = t('title.abbr');
   const isLogsPage = location.pathname.startsWith('/logs');
   const isQuotaPage = location.pathname === '/quota' || location.pathname === '/';
+  const isUsagePage = location.pathname === '/usage';
   const isPluginResourcePage = location.pathname.startsWith('/plugin-pages');
   const showSidebarLabels = !sidebarCollapsed || sidebarOpen;
 
@@ -652,6 +653,12 @@ export function MainLayout() {
           labelKey: 'nav.logs',
           metaKey: 'nav_meta.logs',
           icon: sidebarIcons.logs,
+        },
+        {
+          path: '/usage',
+          labelKey: 'usage.title',
+          metaKey: 'usage.nav_hint',
+          icon: sidebarIcons.dashboard,
         },
       ],
     },
@@ -973,7 +980,7 @@ export function MainLayout() {
 
   return (
     <div
-      className={`app-shell ${isQuotaPage ? 'quota-shell' : ''} ${sidebarCollapsed ? 'sidebar-is-collapsed' : ''} ${
+      className={`app-shell ${isQuotaPage ? 'quota-shell' : ''} ${isUsagePage ? 'usage-shell' : ''} ${sidebarCollapsed ? 'sidebar-is-collapsed' : ''} ${
         isPluginResourcePage ? 'plugin-resource-shell' : ''
       }`}
     >

@@ -43,7 +43,8 @@
 }
 
 @media (min-width: 1100px) {
-  .app-shell.quota-shell {
+  .app-shell.quota-shell,
+  .app-shell.usage-shell {
     --floating-control-size: 30px;
 
     .top-gradient-blur {
