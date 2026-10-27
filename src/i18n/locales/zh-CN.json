@@ -1594,6 +1594,8 @@
     "timeline_waiting_hint": "开启实时或刷新账号详情，以加载这些账号的重置时间。",
     "timeline_page": "时间线第 {{current}} 页，共 {{total}} 页",
     "live": "实时",
+    "request_summary_scope": "配额凭证 · 累计记录",
+    "request_summary_empty": "暂无请求记录",
     "refresh_interval": "配额刷新间隔",
     "refresh_minutes": "{{count}} 分钟",
     "refresh_interval_hint": "立即保存在此浏览器中。仅在启用实时且窗口获得焦点时刷新各账户；请求间隔至少一分钟。账户较多时可能需要更长时间。",

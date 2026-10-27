@@ -1595,6 +1595,8 @@
     "timeline_waiting_hint": "실시간을 켜거나 계정 세부 정보를 새로고침하여 초기화 시간을 불러오세요.",
     "timeline_page": "타임라인 {{current}} / {{total}} 페이지",
     "live": "실시간",
+    "request_summary_scope": "할당량 계정 · 기록된 누적 합계",
+    "request_summary_empty": "기록된 요청 없음",
     "refresh_interval": "할당량 새로고침 간격",
     "refresh_minutes": "{{count}}분",
     "refresh_interval_hint": "이 브라우저에 즉시 저장됩니다. 실시간 모드가 켜져 있고 창에 포커스가 있을 때 계정별로 갱신하며 요청 간격은 최소 1분입니다. 계정이 많으면 더 오래 걸릴 수 있습니다.",

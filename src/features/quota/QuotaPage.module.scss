@@ -232,6 +232,15 @@
   font-size: 13px;
 }
 
+.summaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  min-width: 0;
+}
+
 @media (min-width: 1100px) {
   .page {
     gap: 12px;

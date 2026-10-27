@@ -1622,6 +1622,8 @@
     "timeline_waiting_hint": "開啟即時或更新帳號詳情，以載入這些帳號的重設時間。",
     "timeline_page": "時間軸第 {{current}} 頁，共 {{total}} 頁",
     "live": "即時",
+    "request_summary_scope": "配額憑證 · 累計紀錄",
+    "request_summary_empty": "尚無請求紀錄",
     "refresh_interval": "配額重新整理間隔",
     "refresh_minutes": "{{count}} 分鐘",
     "refresh_interval_hint": "立即儲存在此瀏覽器中。僅在啟用即時且視窗取得焦點時更新各帳戶；請求間隔至少一分鐘。帳戶較多時可能需要更長時間。",

@@ -25,6 +25,7 @@ import type { AuthFileItem, ResolvedTheme } from '@/types';
 import { getQuotaCacheKey } from '@/utils/quota/identity';
 import { ProviderTabs } from '@/features/authFiles/components/ProviderTabs';
 import { QuotaHeader } from './components/QuotaHeader';
+import { QuotaRequestSummary } from './components/QuotaRequestSummary';
 import { QuotaCard } from './components/QuotaCard';
 import {
   CARD_ENTRANCE_BUDGET_MS,
@@ -432,13 +433,19 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
         onLiveChange={setLive}
       />
 
-      {entries.some((entry) => getQuota(entry)?.cachedAt) && (
-        <p role="status" className={styles.cacheStatus}>
-          {t(
-            `quota_management.${loading || batchLoading ? 'snapshot_updating' : 'snapshot_waiting'}`
-          )}
-        </p>
-      )}
+      <div className={styles.summaryRow}>
+        {entries.some((entry) => getQuota(entry)?.cachedAt) && (
+          <p role="status" className={styles.cacheStatus}>
+            {t(
+              `quota_management.${loading || batchLoading ? 'snapshot_updating' : 'snapshot_waiting'}`
+            )}
+          </p>
+        )}
+        <QuotaRequestSummary
+          files={entries.map((entry) => entry.file)}
+          ready={filesGeneration === sessionGeneration && !error}
+        />
+      </div>
 
       <section className={styles.workbench}>
         {/* 提供商导航与搜索工具栏分层，避免不同控件争夺视觉焦点。 */}
