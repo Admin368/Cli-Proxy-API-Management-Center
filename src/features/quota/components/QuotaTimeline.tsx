@@ -12,7 +12,7 @@
  * quotaTimeline.ts.)
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatRelativeInstant, TYPE_COLORS } from '@/utils/quota';
@@ -161,6 +161,31 @@ export function QuotaTimeline({
       ? ((now - span.startMs) / (span.endMs - span.startMs)) * 100
       : null;
 
+  const chartRef = useRef<HTMLDivElement>(null);
+  const centeredPeriod = useRef('');
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (offset !== 0) centeredPeriod.current = '';
+    if (!chart || lanes.length === 0 || offset !== 0 || nowPercent === null) return;
+    const period = `${mode}:${span.startMs}`;
+    const center = () => {
+      if (centeredPeriod.current === period || chart.clientWidth === 0) return;
+      const track = chart.querySelector<HTMLElement>(`.${styles.track}`);
+      if (!track) return;
+      const marker =
+        track.getBoundingClientRect().left -
+        chart.getBoundingClientRect().left +
+        chart.scrollLeft +
+        (track.clientWidth * nowPercent) / 100;
+      chart.scrollLeft = Math.max(0, marker - chart.clientWidth / 2);
+      centeredPeriod.current = period;
+    };
+    center();
+    const observer = new ResizeObserver(center);
+    observer.observe(chart);
+    return () => observer.disconnect();
+  }, [mode, offset, span.startMs, nowPercent, lanes.length]);
+
   if (!hasAnyLane && !fixedMode) return null;
 
   return (
@@ -234,6 +259,7 @@ export function QuotaTimeline({
       </header>
 
       <div
+        ref={chartRef}
         className={styles.chart}
         tabIndex={0}
         role="region"

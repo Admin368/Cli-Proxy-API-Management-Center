@@ -4,9 +4,29 @@ import {
   LIVE_ACCOUNT_INTERVAL_MS,
   readQuotaLive,
   writeQuotaLive,
+  normalizeQuotaRefreshMinutes,
+  readQuotaRefreshMinutes,
 } from '@/features/quota/livePolling';
 
 describe('paced quota polling', () => {
+  test('defaults to five minutes and accepts only whole minutes from one to sixty', () => {
+    expect(normalizeQuotaRefreshMinutes(1)).toBe(1);
+    expect(normalizeQuotaRefreshMinutes(60)).toBe(60);
+    for (const invalid of [0, -1, 61, 1.5, NaN, Infinity]) {
+      expect(normalizeQuotaRefreshMinutes(invalid)).toBe(5);
+    }
+    expect(readQuotaRefreshMinutes()).toBe(5);
+  });
+
+  test('uses the configured interval and never backs off below it', () => {
+    const queue = new QuotaPollQueue();
+    queue.complete('a', 1_000, true, 60_000);
+    expect(queue.next(['a'], 60_999)).toBeUndefined();
+    expect(queue.next(['a'], 61_000)).toBe('a');
+    queue.complete('a', 1_000, false, 3_600_000);
+    expect(queue.next(['a'], 3_600_999)).toBeUndefined();
+    expect(queue.next(['a'], 3_601_000)).toBe('a');
+  });
   test('saves both toggle values across reads and tolerates blocked storage', () => {
     const original = (globalThis as { window?: unknown }).window;
     const saved = new Map<string, string>();
@@ -20,6 +40,11 @@ describe('paced quota polling', () => {
         },
       });
       expect(readQuotaLive()).toBe(true);
+      expect(readQuotaRefreshMinutes()).toBe(5);
+      saved.set('quotaPage.refreshMinutes', '12');
+      expect(readQuotaRefreshMinutes()).toBe(12);
+      saved.set('quotaPage.refreshMinutes', 'bad');
+      expect(readQuotaRefreshMinutes()).toBe(5);
       writeQuotaLive(false);
       expect(readQuotaLive()).toBe(false);
       writeQuotaLive(true);
@@ -47,7 +72,7 @@ describe('paced quota polling', () => {
       const next = queue.next(accounts, now)!;
       visited.push(next);
       queue.complete(next, now, true);
-      now += 5_000;
+      now += 60_000;
     }
     expect(new Set(visited).size).toBe(45);
     expect(queue.next(accounts, now)).toBe(accounts[0]);
@@ -65,14 +90,14 @@ describe('paced quota polling', () => {
   test('backs off errors to 15 minutes and returns to normal pace after recovery', () => {
     const queue = new QuotaPollQueue();
     let now = 1_000_000;
-    for (const delay of [240_000, 480_000, 900_000, 900_000]) {
+    for (const delay of [600_000, 900_000, 900_000, 900_000]) {
       queue.complete('rate-limited', now, false);
       expect(queue.next(['rate-limited'], now + delay - 1)).toBeUndefined();
       expect(queue.next(['rate-limited'], now + delay)).toBe('rate-limited');
       now += delay;
     }
     queue.complete('rate-limited', now, true);
-    expect(queue.next(['rate-limited'], now + 120_000)).toBe('rate-limited');
+    expect(queue.next(['rate-limited'], now + LIVE_ACCOUNT_INTERVAL_MS)).toBe('rate-limited');
   });
 
   test('removed accounts are pruned and a new session does not inherit cooldowns', () => {
