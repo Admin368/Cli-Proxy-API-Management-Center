@@ -30,17 +30,21 @@ interface BatchFetchResult {
 export function useQuotaBatchLoader() {
   const { t } = useTranslation();
   const [batchLoading, setBatchLoading] = useState(false);
+  const [refreshingKeys, setRefreshingKeys] = useState<Set<string>>(new Set());
   const loadingRef = useRef(false);
   const requestIdRef = useRef(0);
 
   const loadQuota = useCallback(
-    async (targets: QuotaFileEntry[]) => {
+    async (targets: QuotaFileEntry[], options: { background?: boolean } = {}) => {
       if (loadingRef.current) return;
       if (targets.length === 0) return;
       loadingRef.current = true;
       const requestId = ++requestIdRef.current;
       const cacheGeneration = captureQuotaCacheGeneration();
       setBatchLoading(true);
+      setRefreshingKeys(
+        new Set(targets.map((entry) => `${entry.type}:${getQuotaCacheKey(entry.file)}`))
+      );
 
       try {
         const groups = new Map<QuotaProviderType, QuotaFileEntry[]>();
@@ -55,15 +59,16 @@ export function useQuotaBatchLoader() {
             const adapter = QUOTA_ADAPTERS[type];
             const setQuota = getQuotaSetter(adapter);
 
-            commitIfQuotaCacheCurrent(cacheGeneration, () => {
-              setQuota((prev) => {
-                const nextState = { ...prev };
-                entries.forEach(({ file }) => {
-                  nextState[getQuotaCacheKey(file)] = adapter.buildLoadingState();
+            if (!options.background)
+              commitIfQuotaCacheCurrent(cacheGeneration, () => {
+                setQuota((prev) => {
+                  const nextState = { ...prev };
+                  entries.forEach(({ file }) => {
+                    nextState[getQuotaCacheKey(file)] = adapter.buildLoadingState();
+                  });
+                  return nextState;
                 });
-                return nextState;
               });
-            });
 
             const results = await Promise.all(
               entries.map(async ({ file }): Promise<BatchFetchResult> => {
@@ -118,6 +123,7 @@ export function useQuotaBatchLoader() {
       } finally {
         if (requestId === requestIdRef.current) {
           setBatchLoading(false);
+          setRefreshingKeys(new Set());
           loadingRef.current = false;
         }
       }
@@ -125,5 +131,5 @@ export function useQuotaBatchLoader() {
     [t]
   );
 
-  return { batchLoading, loadQuota };
+  return { batchLoading, loadQuota, refreshingKeys };
 }

@@ -352,6 +352,8 @@ export function MainLayout() {
   const fullBrandName = 'CLI Proxy API Management Center';
   const abbrBrandName = t('title.abbr');
   const isLogsPage = location.pathname.startsWith('/logs');
+  const isQuotaPage = location.pathname === '/quota' || location.pathname === '/';
+  const isUsagePage = location.pathname === '/usage';
   const isPluginResourcePage = location.pathname.startsWith('/plugin-pages');
   const showSidebarLabels = !sidebarCollapsed || sidebarOpen;
 
@@ -598,7 +600,13 @@ export function MainLayout() {
       labelKey: 'nav_groups.operate',
       items: [
         {
-          path: '/',
+          path: '/quota',
+          labelKey: 'nav.quota_management',
+          metaKey: 'nav_meta.quota_management',
+          icon: sidebarIcons.quota,
+        },
+        {
+          path: '/dashboard',
           labelKey: 'nav.dashboard',
           metaKey: 'nav_meta.dashboard',
           icon: sidebarIcons.dashboard,
@@ -641,16 +649,16 @@ export function MainLayout() {
       labelKey: 'nav_groups.observe',
       items: [
         {
-          path: '/quota',
-          labelKey: 'nav.quota_management',
-          metaKey: 'nav_meta.quota_management',
-          icon: sidebarIcons.quota,
-        },
-        {
           path: '/logs',
           labelKey: 'nav.logs',
           metaKey: 'nav_meta.logs',
           icon: sidebarIcons.logs,
+        },
+        {
+          path: '/usage',
+          labelKey: 'usage.title',
+          metaKey: 'usage.nav_hint',
+          icon: sidebarIcons.dashboard,
         },
       ],
     },
@@ -703,7 +711,7 @@ export function MainLayout() {
   const getRouteOrder = (pathname: string) => {
     const trimmedPath =
       pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
-    const normalizedPath = trimmedPath === '/dashboard' ? '/' : trimmedPath;
+    const normalizedPath = trimmedPath === '/' ? '/quota' : trimmedPath;
 
     const authFilesIndex = navOrder.indexOf('/auth-files');
     if (authFilesIndex !== -1) {
@@ -727,7 +735,7 @@ export function MainLayout() {
     const normalize = (pathname: string) => {
       const trimmed =
         pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
-      return trimmed === '/dashboard' ? '/' : trimmed;
+      return trimmed === '/' ? '/quota' : trimmed;
     };
 
     const from = normalize(fromPathname);
@@ -972,7 +980,7 @@ export function MainLayout() {
 
   return (
     <div
-      className={`app-shell ${sidebarCollapsed ? 'sidebar-is-collapsed' : ''} ${
+      className={`app-shell ${isQuotaPage ? 'quota-shell' : ''} ${isUsagePage ? 'usage-shell' : ''} ${sidebarCollapsed ? 'sidebar-is-collapsed' : ''} ${
         isPluginResourcePage ? 'plugin-resource-shell' : ''
       }`}
     >

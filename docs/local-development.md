@@ -1,0 +1,107 @@
+# Personal local setup
+
+## Start the web UI
+
+Use the pinned Bun version (1.3.14), then run:
+
+```powershell
+bun install --frozen-lockfile
+bun run dev
+```
+
+Vite binds to `127.0.0.1:5173` and fails if the port is occupied. This starts the
+frontend only. Keep the existing CLIProxyAPI v8 backend running separately with
+its current configuration and auth directory.
+
+## Local names for multiple apps (Windows x64)
+
+```powershell
+.\scripts\Setup-LocalDomain.ps1
+```
+
+This downloads the official Caddy Windows x64 release, checks its published
+SHA-512, and installs a shared router under `%LOCALAPPDATA%\LocalDevProxy`.
+It creates a route for `http://local.cli` to `http://127.0.0.1:5173` and a
+per-user Startup shortcut. The router binds only to loopback. Vite explicitly
+allows `local.cli`; it does not allow arbitrary Host headers.
+
+The final hosts-file registration requires Administrator access. If the script
+reports access denied, run only the reported `Add-Content` command in an
+Administrator PowerShell window. The rest of the setup runs as your normal
+user. Use `-SkipHosts` to prepare a route without changing hostname resolution.
+
+Add another app with the same script:
+
+```powershell
+.\scripts\Setup-LocalDomain.ps1 -Domain local.notes -Port 3000
+```
+
+Each app gets a separate file in `%LOCALAPPDATA%\LocalDevProxy\sites`; rerunning
+the script reloads the shared router. Allow that explicit hostname in the other
+app's dev server too. Each name needs a hosts entry, but every app shares port 80
+and the router. Do not use wildcard hosts entries: Windows does not support them.
+For many machines, keep the route files and this script in your personal setup
+repository and register names on each machine. These names are local overrides,
+not owned public domains; use explicit `http://local.cli` to avoid a search query.
+
+On first visiting the new origin, sign in again with backend address
+`http://127.0.0.1:8317` and your existing management key. Browser login storage
+is separate per origin; backend accounts/configuration are shared. The router
+does not rewrite backend-declared plugin or extension paths.
+
+To restart the router manually:
+
+```powershell
+& "$env:LOCALAPPDATA\LocalDevProxy\Start-LocalDevProxy.ps1"
+```
+
+The frontend still needs `bun run dev` after a reboot. To uninstall, stop only
+the Caddy process whose executable is under `LocalDevProxy`, remove the
+`LocalDevProxy.lnk` shortcut from your Startup folder, and remove only your
+`# LocalDevProxy` hosts entries. Port 80 and local admin port 2020 must be free
+before the initial setup; inspect `%LOCALAPPDATA%\LocalDevProxy\stderr.log` if
+startup fails.
+
+## Quota home and Live
+
+The root route opens `/quota`; the previous dashboard remains at `/dashboard`.
+The first section is the searchable provider quota cards, with their existing
+percentage-based colors, provider filters, sorting, and pagination. Below them
+are two independent charts: five-hour windows across one local calendar day
+with hourly labels, then the existing weekly timeline. Both use the filtered
+current page of accounts. Each chart has independent date navigation. The day
+view advances with the current-time marker and supports horizontal scrolling
+when hourly labels need more space. Quota values remain independent; no limits
+are averaged across accounts.
+
+Live is on by default and saved in browser local storage. It checks one account
+at a time, with at least one minute between automatic account checks and a
+default five-minute per-account interval (1–60 minutes in Config Panel). Failures
+back off up to 15 minutes, never below a longer configured interval. Large
+account sets take longer to cycle. Inventory/request totals use the configured
+interval too. Hidden or unfocused windows, offline browsers, disconnected
+sessions, and ongoing batch/reset operations pause new reads. Unmounting stops scheduling; an already-started read
+may finish using the existing session guards. Provider adapters may perform
+multiple upstream calls/enrichment for a single quota read.
+
+Turning Live off leaves explicit refresh buttons available. Live covers every
+account, including disabled accounts: these are read-only quota lookups and do
+not re-enable inference routing. The manual refresh button retains its current-page
+scope. Preferences are per browser origin, not synced between machines.
+
+Last successful quota observations and minimal account display identities are
+saved locally for up to seven days, scoped by backend and a management-key
+fingerprint. Reloading shows those saved values immediately, with saved times
+and waiting/updating/failure labels until fresh reads replace them. Logout
+removes saved snapshots. Account removal or identity changes invalidate the
+matching observation. Cached observations never authorize quota-reset actions.
+The snapshot excludes credentials, raw auth-file contents, and raw responses;
+it is display data in browser storage, not an encrypted credential vault.
+
+Disabled cards retain saved quota when available and can fetch current quota while
+remaining disabled for inference. A known status-only change can preserve its
+snapshot across a file timestamp update when filename, auth index, provider and
+public account identity still match; credential edits and unrelated identity
+changes still invalidate cached data. Claude/Codex five-hour rows remain visible
+when a reset time is missing, showing the reported remaining percentage without
+inventing a countdown or reset boundary.

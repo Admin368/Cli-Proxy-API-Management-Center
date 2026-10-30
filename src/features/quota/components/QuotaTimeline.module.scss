@@ -11,6 +11,66 @@ $lane-width: 210px;
   gap: $spacing-md;
 }
 
+@media (min-width: 1100px) {
+  .timeline {
+    min-width: 0;
+    gap: 8px;
+
+    .head {
+      gap: 6px 10px;
+    }
+
+    .title {
+      font-size: 16px;
+    }
+
+    .chart {
+      overflow-x: auto;
+    }
+
+    .axis,
+    .lane {
+      min-width: 720px;
+      grid-template-columns: 170px 1fr;
+    }
+
+    .laneHead {
+      padding: 6px 8px;
+    }
+
+    .track {
+      min-height: 38px;
+    }
+
+    .laneIdle {
+      left: 180px;
+    }
+
+    // Percentages remain visible in the cards above; keep the chart lanes focused on time.
+    .laneLimits {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    .legend {
+      gap: 6px 12px;
+    }
+  }
+}
+
+.timeline[data-mode='session'] {
+  .chart {
+    overflow-x: auto;
+  }
+  .axis,
+  .lane {
+    min-width: 1026px;
+  }
+}
+
 .head {
   display: flex;
   align-items: flex-start;
@@ -106,6 +166,11 @@ $lane-width: 210px;
 }
 
 .axisLabel {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-color);
   padding: 8px 12px;
   font-size: 10.5px;
   font-weight: 600;
@@ -163,6 +228,11 @@ $lane-width: 210px;
 }
 
 .laneHead {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -329,7 +399,8 @@ $lane-width: 210px;
 }
 
 .laneIdle {
-  position: relative;
+  position: sticky;
+  left: $lane-width + 10px;
   z-index: 2;
   padding-left: 10px;
   font-size: 11px;
@@ -378,8 +449,13 @@ $lane-width: 210px;
 }
 
 .legendNote {
-  flex: 1 1 320px;
   min-width: 0;
+  summary {
+    cursor: pointer;
+  }
+  p {
+    margin: 6px 0 0;
+  }
 }
 
 @include mobile {
@@ -392,5 +468,30 @@ $lane-width: 210px;
   .axis,
   .lane {
     min-width: 720px;
+  }
+}
+
+.weeklyBlocked {
+  position: sticky;
+  left: 8px;
+  z-index: 5;
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.track[data-weekly-blocked] {
+  .window {
+    opacity: 0.4;
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent,
+      transparent 5px,
+      rgba(128, 128, 128, 0.25) 5px,
+      rgba(128, 128, 128, 0.25) 8px
+    );
   }
 }

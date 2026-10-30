@@ -1,0 +1,229 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  h1 {
+    margin: 0;
+    font-size: 26px;
+  }
+}
+.eyebrow {
+  margin: 0 0 3px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.status {
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
+.error {
+  padding: 12px;
+  border: 1px solid var(--danger-color);
+  border-radius: 10px;
+  color: var(--danger-color);
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 18px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-primary);
+  }
+  span {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  strong {
+    font-size: 24px;
+    font-variant-numeric: tabular-nums;
+  }
+}
+.filters {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(100px, 1fr));
+  gap: 8px;
+}
+.searchInput {
+  grid-column: 1 / -1;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 9px 12px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+.tableWrap {
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  max-height: min(62vh, 760px);
+  table {
+    width: 100%;
+    min-width: 1400px;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 13px 16px;
+    background: var(--bg-secondary);
+    text-align: left;
+    color: var(--text-secondary);
+    font-size: 11px;
+  }
+  td {
+    padding: 15px 16px;
+    border-top: 1px solid var(--border-color);
+    font-variant-numeric: tabular-nums;
+  }
+  tbody tr:hover {
+    background: var(--bg-secondary);
+  }
+  strong {
+    display: block;
+    font-size: 13px;
+  }
+  small {
+    display: block;
+    margin-top: 5px;
+    color: var(--text-tertiary);
+    font-size: 11px;
+  }
+}
+.source {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.time {
+  white-space: nowrap;
+}
+.result {
+  display: inline-block;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.success {
+  color: var(--viz-success);
+  background: color-mix(in srgb, var(--viz-success) 12%, transparent);
+}
+.failure {
+  color: var(--viz-failure);
+  background: color-mix(in srgb, var(--viz-failure) 12%, transparent);
+}
+.canceled {
+  color: var(--amber-color);
+  background: color-mix(in srgb, var(--amber-color) 12%, transparent);
+}
+.tableWrap .empty {
+  padding: 60px 24px;
+  text-align: center;
+  p {
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+}
+.footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.pagination {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+.columnOptions {
+  position: relative;
+  summary {
+    cursor: pointer;
+    padding: 7px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+  }
+  > div {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    z-index: 3;
+    min-width: 180px;
+    padding: 12px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: var(--floating-shadow);
+  }
+  label {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 0;
+  }
+}
+@media (max-width: 768px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pagination {
+    margin-left: 0;
+  }
+}
+
+@media (min-width: 1100px) {
+  .page {
+    height: calc(100dvh - 24px);
+    min-height: 600px;
+    gap: 10px;
+  }
+  .header {
+    padding-right: 158px;
+  }
+  .tableWrap {
+    flex: 1;
+    min-height: 160px;
+    max-height: none;
+  }
+}

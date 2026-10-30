@@ -4,6 +4,8 @@
  */
 
 import { create } from 'zustand';
+import { clearSavedQuotaSnapshots } from '@/features/quota/snapshot';
+import { clearUsageHistory } from '@/features/usage/storage';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { AuthState, LoginCredentials, ConnectionStatus } from '@/types';
 import { STORAGE_KEY_AUTH } from '@/utils/constants';
@@ -150,6 +152,8 @@ export const useAuthStore = create<AuthStoreState>()(
 
       // 登出
       logout: () => {
+        clearSavedQuotaSnapshots();
+        void clearUsageHistory().catch(() => {});
         restoreSessionPromise = null;
         apiClient.setConfig({ apiBase: '', managementKey: '' });
         useConfigStore.getState().clearCache();

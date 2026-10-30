@@ -1,0 +1,33 @@
+.tools {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  min-width: 0;
+  padding-top: 5px;
+  border-top: 1px solid var(--border-color);
+  > button:global(.btn-sm) {
+    min-height: 26px;
+    height: 26px;
+    padding: 3px 6px;
+    font-size: 11px;
+    min-width: 26px;
+  }
+  > :last-child {
+    margin-left: auto;
+  }
+  :global(.btn > span) {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+.enabled {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--text-tertiary);
+}

@@ -50,7 +50,7 @@ export const resolveQuotaProviderType = (file: AuthFileItem): QuotaProviderType 
     : (QUOTA_TAB_ORDER.find((type) => QUOTA_FILTER_MAP[type](file)) ?? null);
 
 /**
- * 把文件列表归类为额度条目：不支持额度或已停用的文件被过滤，
+ * 把文件列表归类为额度条目：仅过滤不支持额度的文件，停用凭证保留展示。
  * 结果按 QUOTA_TAB_ORDER 分组排列（'全部' tab 的卡片顺序即由此决定）。
  */
 export function classifyQuotaFiles(files: AuthFileItem[]): QuotaFileEntry[] {
@@ -58,7 +58,8 @@ export function classifyQuotaFiles(files: AuthFileItem[]): QuotaFileEntry[] {
     QUOTA_TAB_ORDER.map((type) => [type, []])
   );
   for (const file of files) {
-    const type = resolveQuotaProviderType(file);
+    // Display eligibility is independent of request eligibility. Keep the original disabled flag.
+    const type = resolveQuotaProviderType({ ...file, disabled: false });
     if (!type) continue;
     groups.get(type)?.push({ file, type });
   }
