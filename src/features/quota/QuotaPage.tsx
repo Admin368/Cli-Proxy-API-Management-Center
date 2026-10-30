@@ -101,12 +101,11 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<QuotaTabId>(() => readQuotaUiState()?.tab ?? 'all');
-  const [sortMode, setSortMode] = useState<QuotaSortMode>(
-    () => readQuotaUiState()?.sortMode ?? 'default'
-  );
-  const [availabilitySort, setAvailabilitySort] = useState(() =>
-    readAvailabilityPreference(snapshotScope)
-  );
+  const [sortMode, setSortMode] = useState<QuotaSortMode>(() => {
+    if (readAvailabilityPreference(snapshotScope)) return 'availability';
+    const saved = readQuotaUiState()?.sortMode;
+    return saved === 'availability' ? 'default' : (saved ?? 'default');
+  });
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -282,7 +281,7 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
   // 排序在分页之前：否则「最快恢复」只在当前页内成立。
   const sortedEntries = useMemo(() => {
     const entries = sortQuotaEntries(filteredEntries, sortMode, resolveNextRecovery);
-    if (!availabilitySort) return entries;
+    if (sortMode !== 'availability') return entries;
     const scores = new Map(
       entries.map((entry) => [
         entry,
@@ -295,7 +294,7 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
       ])
     );
     return [...entries].sort((a, b) => scores.get(b)! - scores.get(a)!);
-  }, [filteredEntries, sortMode, resolveNextRecovery, availabilitySort, getQuota]);
+  }, [filteredEntries, sortMode, resolveNextRecovery, getQuota]);
 
   const { pageItems, currentPage, totalPages } = useMemo(
     () => paginate(sortedEntries, page, QUOTA_PAGE_SIZE),
@@ -308,11 +307,15 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
     writeQuotaUiState({ tab: next as QuotaTabId });
   }, []);
 
-  const handleSortModeChange = useCallback((next: string) => {
-    setSortMode(next as QuotaSortMode);
-    setPage(1);
-    writeQuotaUiState({ sortMode: next as QuotaSortMode });
-  }, []);
+  const handleSortModeChange = useCallback(
+    (next: string) => {
+      saveAvailabilityPreference(snapshotScope, next === 'availability');
+      setSortMode(next as QuotaSortMode);
+      setPage(1);
+      writeQuotaUiState({ sortMode: next as QuotaSortMode });
+    },
+    [snapshotScope]
+  );
 
   const sortOptions = useMemo(
     () =>
@@ -518,19 +521,6 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
               </button>
             )}
           </div>
-          <label>
-            <input
-              type="checkbox"
-              checked={availabilitySort}
-              onChange={(event) => {
-                const enabled = event.target.checked;
-                setAvailabilitySort(enabled);
-                saveAvailabilityPreference(snapshotScope, enabled);
-                setPage(1);
-              }}
-            />
-            {t('quota_management.sort_availability')}
-          </label>
           <div className={styles.sort}>
             <Select
               value={sortMode}
