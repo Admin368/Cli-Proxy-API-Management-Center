@@ -1596,6 +1596,7 @@
     "live": "实时",
     "disabled_no_quota": "已停用 — 暂无保存的配额",
     "disabled_account": "已停用",
+    "windows_weekly_blocked": "不可用 · 每周配额已耗尽",
     "windows_reset_unknown": "未报告重置时间",
     "windows_no_reading": "暂无五小时配额数据",
     "windows_guide": "图表说明",

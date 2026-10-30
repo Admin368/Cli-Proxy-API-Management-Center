@@ -1597,6 +1597,7 @@
     "live": "Live",
     "disabled_no_quota": "Disabled — no saved quota yet",
     "disabled_account": "Disabled",
+    "windows_weekly_blocked": "Unavailable · weekly quota exhausted",
     "windows_reset_unknown": "Reset time not reported",
     "windows_no_reading": "No five-hour reading yet",
     "windows_guide": "Chart guide",

@@ -58,6 +58,7 @@ export interface TimelineLane {
   periodHours: number | null;
   /** Remaining percent reported for the window ending at `anchorMs`. */
   remaining: number | null;
+  weeklyExhausted?: boolean;
   limits: TimelineLimit[];
   resetCredits: TimelineResetCredit[];
 }
@@ -416,6 +417,15 @@ export function buildTimelineLane(input: TimelineLaneInput): TimelineLane {
 
     return {
       ...empty,
+      weeklyExhausted:
+        chosen.periodHours === 5 &&
+        windows.some(
+          (window) =>
+            (window.periodHours ?? 0) >= 168 &&
+            typeof window.usedPercent === 'number' &&
+            window.usedPercent >= 100 &&
+            (window.resetAtMs == null || window.resetAtMs > Date.now())
+        ),
       anchorMs: chosen.resetAtMs ?? null,
       periodHours: chosen.periodHours ?? null,
       // Claude and Codex store percent USED.

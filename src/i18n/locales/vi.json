@@ -1553,6 +1553,7 @@
     "live": "Trực tiếp",
     "disabled_no_quota": "Đã tắt — chưa có hạn mức đã lưu",
     "disabled_account": "Đã tắt",
+    "windows_weekly_blocked": "Không khả dụng · đã hết hạn mức tuần",
     "windows_reset_unknown": "Chưa có thời gian đặt lại",
     "windows_no_reading": "Chưa có dữ liệu hạn mức 5 giờ",
     "windows_guide": "Hướng dẫn biểu đồ",

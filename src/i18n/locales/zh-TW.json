@@ -1624,6 +1624,7 @@
     "live": "即時",
     "disabled_no_quota": "已停用 — 尚無儲存的配額",
     "disabled_account": "已停用",
+    "windows_weekly_blocked": "無法使用 · 每週配額已用盡",
     "windows_reset_unknown": "未回報重設時間",
     "windows_no_reading": "尚無五小時配額資料",
     "windows_guide": "圖表說明",

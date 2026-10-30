@@ -1597,6 +1597,7 @@
     "live": "실시간",
     "disabled_no_quota": "비활성 — 저장된 할당량 없음",
     "disabled_account": "비활성",
+    "windows_weekly_blocked": "사용 불가 · 주간 할당량 소진",
     "windows_reset_unknown": "초기화 시간 미제공",
     "windows_no_reading": "5시간 할당량 데이터 없음",
     "windows_guide": "차트 안내",

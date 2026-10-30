@@ -426,7 +426,12 @@ function Lane({ lane, span, now, mode, cells, nowPercent, resolvedTheme }: LaneP
         </div>
       </div>
 
-      <div className={styles.track}>
+      <div className={styles.track} data-weekly-blocked={lane.weeklyExhausted || undefined}>
+        {mode === 'session' && lane.weeklyExhausted && (
+          <span className={styles.weeklyBlocked} role="status">
+            {t('quota_management.windows_weekly_blocked')}
+          </span>
+        )}
         <div className={styles.trackGrid}>
           {cells.map((cell) => (
             <span

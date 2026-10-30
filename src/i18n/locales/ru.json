@@ -1600,6 +1600,7 @@
     "live": "В реальном времени",
     "disabled_no_quota": "Отключено — сохранённых квот пока нет",
     "disabled_account": "Отключено",
+    "windows_weekly_blocked": "Недоступно · недельная квота исчерпана",
     "windows_reset_unknown": "Время сброса не указано",
     "windows_no_reading": "Пока нет данных за пять часов",
     "windows_guide": "О диаграмме",

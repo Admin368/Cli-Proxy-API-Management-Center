@@ -470,3 +470,28 @@ $lane-width: 210px;
     min-width: 720px;
   }
 }
+
+.weeklyBlocked {
+  position: sticky;
+  left: 8px;
+  z-index: 5;
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.track[data-weekly-blocked] {
+  .window {
+    opacity: 0.4;
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent,
+      transparent 5px,
+      rgba(128, 128, 128, 0.25) 5px,
+      rgba(128, 128, 128, 0.25) 8px
+    );
+  }
+}

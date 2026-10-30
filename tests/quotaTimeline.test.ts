@@ -528,3 +528,22 @@ describe('buildTimelineLane', () => {
     expect(lane.anchorMs).toBeNull();
   });
 });
+
+test('weekly exhaustion blocks five-hour availability without hiding its remaining quota', () => {
+  for (const provider of ['claude', 'codex'] as const) {
+    const lane = buildTimelineLane({
+      name: 'test.json',
+      provider,
+      maxPeriodHours: 5,
+      quota: {
+        status: 'success',
+        windows: [
+          { label: '5-hour', usedPercent: 20, resetAtMs: Date.now() + HOUR_MS, periodHours: 5 },
+          { label: 'weekly', usedPercent: 100, resetAtMs: Date.now() + DAY_MS, periodHours: 168 },
+        ],
+      },
+    });
+    expect(lane.weeklyExhausted).toBe(true);
+    expect(lane.remaining).toBe(80);
+  }
+});
