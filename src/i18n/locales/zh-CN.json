@@ -324,6 +324,7 @@
     "problem_filter_disabled": "停用",
     "display_options_label": "显示选项",
     "compact_mode_label": "简略模式",
+    "sort_availability": "按可用配额排序",
     "sort_label": "排序",
     "sort_default": "默认",
     "sort_az": "A-Z 名称",
