@@ -28,7 +28,8 @@ export function useQuotaActions(disableControls: boolean) {
 
   const refreshQuota = useCallback(
     async (file: AuthFileItem, adapter: QuotaAdapter) => {
-      if (disableControls || file.disabled) return;
+      // Quota lookup is read-only and does not re-enable inference routing.
+      if (disableControls) return;
       const cacheKey = getQuotaCacheKey(file);
       if (resettingQuotaName === cacheKey) return;
       if (getQuotaState(adapter, file)?.status === 'loading') return;

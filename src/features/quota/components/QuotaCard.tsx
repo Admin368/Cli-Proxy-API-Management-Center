@@ -3,7 +3,7 @@
  * Claude observations remain visible while refreshing or after a failed read.
  */
 
-import { useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconRefreshCw } from '@/components/ui/icons';
 import type { ClaudeQuotaState, ResolvedTheme } from '@/types';
@@ -23,6 +23,10 @@ import { ClaudeResetGrantDetails } from '../providers/claude/ClaudeResetGrantDet
 import { hasClaudeUsageData } from '../providers/claude/data';
 import bodyStyles from './QuotaBody.module.scss';
 import styles from './QuotaCard.module.scss';
+import { QuotaSnapshotNotice } from './QuotaSnapshotNotice';
+import { QuotaCardRequests } from './QuotaCardRequests';
+import { compactCredentialLabel } from '../credentialLabel';
+import { isDisabledAuthFile } from '@/utils/quota/validators';
 
 /** Bind the quota-page styles to the shared rendering contract. */
 const quotaClasses = bindQuotaClasses(bodyStyles, 'QuotaBody.module.scss');
@@ -37,6 +41,8 @@ export type QuotaCardProps = {
   entranceDelayMs?: number | null;
   onRefresh: () => void;
   onReset: () => void;
+  requestDataReady?: boolean;
+  accountActions?: ReactNode;
 };
 
 export function QuotaCard(props: QuotaCardProps) {
@@ -53,9 +59,10 @@ export function QuotaCard(props: QuotaCardProps) {
   const { t } = useTranslation();
   const adapter = QUOTA_ADAPTERS[entry.type];
   const file = entry.file;
+  const disabled = isDisabledAuthFile(file);
   const retainedClaudeUsage =
     entry.type === 'claude' && hasClaudeUsageData(quota as ClaudeQuotaState | undefined);
-  const displayName = getQuotaDisplayName(file);
+  const displayName = getQuotaDisplayName({ ...file, name: compactCredentialLabel(file.name) });
 
   // Capture the entrance delay only at mount, without a render-time ref read.
   const [mountEntranceDelayMs] = useState<number | null>(entranceDelayMs ?? null);
@@ -65,11 +72,12 @@ export function QuotaCard(props: QuotaCardProps) {
       : ({ '--card-delay': `${mountEntranceDelayMs}ms` } as CSSProperties);
 
   const status = quota?.status ?? 'idle';
-  const loading = status === 'loading';
+  const cached = Boolean(quota?.cachedAt);
+  const loading = status === 'loading' || Boolean(quota?.refreshing);
   const claudeReset = useClaudeResetGrants(
     file,
-    entry.type === 'claude' && status !== 'idle',
-    !canRefresh || loading || resetting,
+    entry.type === 'claude' && status !== 'idle' && !cached && !disabled,
+    disabled || !canRefresh || loading || resetting,
     quota,
     onRefresh
   );
@@ -105,6 +113,7 @@ export function QuotaCard(props: QuotaCardProps) {
     </>
   ) : undefined;
   const showReset =
+    !cached &&
     status === 'success' &&
     Boolean(adapter.resetQuota) &&
     quota !== undefined &&
@@ -131,12 +140,20 @@ export function QuotaCard(props: QuotaCardProps) {
             <span className={styles.iconFallback}>{typeLabel.slice(0, 1).toUpperCase()}</span>
           )}
         </span>
-        <span className={styles.fileName} title={displayName}>
+        <span className={styles.fileName} title={getQuotaDisplayName(file)}>
           {displayName}
         </span>
+        {disabled && (
+          <span className={styles.disabledBadge}>{t('quota_management.disabled_account')}</span>
+        )}
       </header>
 
+      {props.requestDataReady !== undefined && (
+        <QuotaCardRequests file={file} ready={props.requestDataReady} />
+      )}
+
       <div className={styles.body}>
+        <QuotaSnapshotNotice quota={quota} />
         {status === 'idle' ? (
           <button
             type="button"
@@ -145,9 +162,11 @@ export function QuotaCard(props: QuotaCardProps) {
             disabled={!canRefresh}
           >
             <IconRefreshCw size={15} aria-hidden="true" className={styles.idleGlyph} />
-            <span className={styles.idleHint}>{t(`${adapter.i18nPrefix}.idle`)}</span>
+            <span className={styles.idleHint}>
+              {disabled ? t('quota_management.disabled_no_quota') : t(`${adapter.i18nPrefix}.idle`)}
+            </span>
           </button>
-        ) : loading && !retainedClaudeUsage ? (
+        ) : loading && !retainedClaudeUsage && !cached ? (
           <div className={styles.skeleton} aria-busy="true">
             <span className={styles.srOnly}>{t(`${adapter.i18nPrefix}.loading`)}</span>
             {[0, 1].map((row) => (
@@ -188,7 +207,7 @@ export function QuotaCard(props: QuotaCardProps) {
 
       {status !== 'idle' && (
         <footer className={styles.actionRow}>
-          {entry.type === 'claude' && (
+          {entry.type === 'claude' && !cached && (
             <button
               type="button"
               className={styles.actionPill}
@@ -205,7 +224,7 @@ export function QuotaCard(props: QuotaCardProps) {
               type="button"
               className={styles.actionPill}
               onClick={onReset}
-              disabled={!canRefresh || loading || resetting}
+              disabled={disabled || !canRefresh || loading || resetting}
               title={t('codex_quota.reset_button')}
             >
               <IconRefreshCw size={13} className={resetting ? styles.spinning : undefined} />
@@ -224,6 +243,7 @@ export function QuotaCard(props: QuotaCardProps) {
           </button>
         </footer>
       )}
+      {props.accountActions}
     </article>
   );
 }

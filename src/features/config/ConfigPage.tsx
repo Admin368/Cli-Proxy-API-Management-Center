@@ -45,6 +45,7 @@ import { SectionNetwork } from './components/sections/SectionNetwork';
 import { SectionPayload } from './components/sections/SectionPayload';
 import { SectionStreaming } from './components/sections/SectionStreaming';
 import styles from './ConfigPage.module.scss';
+import { QuotaRefreshSettings } from '@/features/quota/components/QuotaRefreshSettings';
 
 /** 首载入场预算：卡片延迟 0.28s + 0.45s 动画，之后关闭 animateIn，切 tab 不再重播。 */
 const ENTRANCE_BUDGET_MS = 800;
@@ -305,6 +306,7 @@ export function ConfigPage() {
         onReload={doc.handleReload}
       />
 
+      <QuotaRefreshSettings />
       {doc.error && (
         <div className="error-box" role="alert">
           {doc.error}

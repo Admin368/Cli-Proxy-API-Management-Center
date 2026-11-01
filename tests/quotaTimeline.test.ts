@@ -87,7 +87,7 @@ describe('span boundaries', () => {
     const session = timelineSpan('session', 0, now);
     const sessionNext = timelineSpan('session', 1, now);
     expect(Math.round((sessionNext.startMs - session.startMs) / DAY_MS)).toBe(1);
-    expect(session.days).toBe(3);
+    expect(session.days).toBe(1);
   });
 
   test('spans a whole number of days even across a DST transition', () => {
@@ -95,6 +95,14 @@ describe('span boundaries', () => {
     const span = timelineSpan('weekly', 0, at(2026, 2, 10, 12));
     expect(new Date(span.startMs).getHours()).toBe(0);
     expect(new Date(span.endMs).getHours()).toBe(0);
+  });
+
+  test('session span runs midnight to midnight on one calendar day, including DST', () => {
+    const span = timelineSpan('session', 0, at(2026, 2, 8, 12));
+    expect(span.startMs).toBe(at(2026, 2, 8, 0));
+    expect(span.endMs).toBe(at(2026, 2, 9, 0));
+    expect(span.days).toBe(1);
+    expect(timelineSpan('session', 1, at(2026, 2, 8, 12)).startMs).toBe(span.endMs);
   });
 });
 
@@ -276,8 +284,8 @@ describe('buildTimelineLane', () => {
 
     // Every limit is still summarized in the lane head regardless of the pick.
     expect(weekly.limits).toEqual([
-      { label: '7-day', remaining: 7 },
-      { label: '5-hour', remaining: 80 },
+      { label: '7-day', remaining: 7, resetAtMs: later },
+      { label: '5-hour', remaining: 80, resetAtMs: soon },
     ]);
   });
 
@@ -367,8 +375,8 @@ describe('buildTimelineLane', () => {
     expect(lane.anchorMs).toBe(5000);
     expect(lane.remaining).toBe(46);
     expect(lane.limits).toEqual([
-      { label: 'Daily', remaining: 46 },
-      { label: 'Monthly', remaining: 73 },
+      { label: 'Daily', remaining: 46, resetAtMs: 5000 },
+      { label: 'Monthly', remaining: 73, resetAtMs: 9000 },
     ]);
   });
 
@@ -396,8 +404,8 @@ describe('buildTimelineLane', () => {
     // remainingFraction is REMAINING, so it is not inverted.
     expect(lane.remaining).toBe(82);
     expect(lane.limits).toEqual([
-      { label: '5h', remaining: 40 },
-      { label: 'Weekly', remaining: 82 },
+      { label: '5h', remaining: 40, resetAtMs: 1000 },
+      { label: 'Weekly', remaining: 82, resetAtMs: 5000 },
     ]);
   });
 
@@ -519,4 +527,23 @@ describe('buildTimelineLane', () => {
     });
     expect(lane.anchorMs).toBeNull();
   });
+});
+
+test('weekly exhaustion blocks five-hour availability without hiding its remaining quota', () => {
+  for (const provider of ['claude', 'codex'] as const) {
+    const lane = buildTimelineLane({
+      name: 'test.json',
+      provider,
+      maxPeriodHours: 5,
+      quota: {
+        status: 'success',
+        windows: [
+          { label: '5-hour', usedPercent: 20, resetAtMs: Date.now() + HOUR_MS, periodHours: 5 },
+          { label: 'weekly', usedPercent: 100, resetAtMs: Date.now() + DAY_MS, periodHours: 168 },
+        ],
+      },
+    });
+    expect(lane.weeklyExhausted).toBe(true);
+    expect(lane.remaining).toBe(80);
+  }
 });
