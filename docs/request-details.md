@@ -50,3 +50,23 @@ Collection verifies storage availability before consuming the queue. If a later 
 fails, collection stops and the in-memory batch remains available to export. Browsers with
 Web Locks coordinate concurrent collectors, and IndexedDB merges records in a serialized
 transaction to avoid overwriting another tab's writes.
+
+## Hourly token analytics
+
+Observe → Token analytics (`#/usage/analytics`) and the section below the quota
+homepage use the same component and connection-scoped local request history.
+Neither instance consumes the backend queue. Use Request details to import CSV
+or explicitly enable collection, then Reload saved history to update the charts.
+
+Choose 24, 72 or 168 hourly buckets, filter by model/account, and select model bars,
+account bars, or combined model bars with account lines. The current partial hour
+is included. Lines show hourly tokens on the same axis as the stacked bars, not
+cumulative usage. Each dimension shows the six largest series plus a lossless
+Other aggregate. Unknown accounts remain explicit.
+
+Only reported total tokens contribute to the chart. Requests without token totals
+still contribute to request and success counts; reading coverage is shown.
+Input/cache/output/reasoning fields are shown separately because they can overlap.
+The expandable hourly table provides exact totals and account-line values.
+These local records are subject to the existing 30-day/10,000-record retention;
+this is not a complete server-wide usage ledger.

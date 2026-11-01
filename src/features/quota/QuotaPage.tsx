@@ -1,3 +1,4 @@
+import { UsageAnalytics } from '@/features/usage/UsageAnalytics';
 /**
  * 额度查询页：提供商 tabs + 统一卡网格。
  *
@@ -638,6 +639,7 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
           </div>
         )}
       </section>
+      <UsageAnalytics />
       {accountTools.dialogs}
     </div>
   );
