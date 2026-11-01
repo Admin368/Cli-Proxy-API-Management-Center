@@ -184,7 +184,6 @@ function AnalyticsContent({ scope }: { scope: string }) {
                   <g key={b.at}>
                     {bars.map((series, j) => {
                       const value = series.values[i];
-                      const bottom = accumulated;
                       accumulated += value;
                       return (
                         <rect
