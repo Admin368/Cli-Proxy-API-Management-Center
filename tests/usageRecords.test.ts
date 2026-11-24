@@ -1,3 +1,8 @@
+import {
+  readUsageCollection,
+  writeUsageCollection,
+  clearUsageCollection,
+} from '@/features/usage/preferences';
 import { expect, spyOn, test } from 'bun:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -195,5 +200,36 @@ test('explicit collection uses only the verified v8 queue domain endpoint', asyn
     });
   } finally {
     get.mockRestore();
+  }
+});
+
+test('collection opt-in persists per connection and clears on logout', () => {
+  const original = (globalThis as { window?: unknown }).window;
+  const saved = new Map<string, string>();
+  try {
+    Object.assign(globalThis, {
+      window: {
+        localStorage: {
+          getItem: (key: string) => saved.get(key) ?? null,
+          setItem: (key: string, value: string) => saved.set(key, value),
+          removeItem: (key: string) => saved.delete(key),
+        },
+      },
+    });
+    expect(readUsageCollection('a')).toBe(false);
+    writeUsageCollection('a', true);
+    expect(readUsageCollection('a')).toBe(true);
+    expect(readUsageCollection('b')).toBe(false);
+    writeUsageCollection('b', true);
+    writeUsageCollection('a', false);
+    expect(readUsageCollection('a')).toBe(false);
+    expect(readUsageCollection('b')).toBe(true);
+    clearUsageCollection();
+    expect(readUsageCollection('b')).toBe(false);
+    saved.set('usagePage.collection', 'invalid');
+    expect(readUsageCollection('a')).toBe(false);
+  } finally {
+    if (original === undefined) delete (globalThis as { window?: unknown }).window;
+    else Object.assign(globalThis, { window: original });
   }
 });

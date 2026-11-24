@@ -1,3 +1,5 @@
+import { clearDesktopUsageConnections } from '@/features/usage/desktopConnection';
+import { clearUsageCollection } from '@/features/usage/preferences';
 /**
  * 认证状态管理
  * 从原项目 src/modules/login.js 和 src/core/connection.js 迁移
@@ -153,6 +155,8 @@ export const useAuthStore = create<AuthStoreState>()(
       // 登出
       logout: () => {
         clearSavedQuotaSnapshots();
+        clearUsageCollection();
+        clearDesktopUsageConnections();
         void clearUsageHistory().catch(() => {});
         restoreSessionPromise = null;
         apiClient.setConfig({ apiBase: '', managementKey: '' });

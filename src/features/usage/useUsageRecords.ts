@@ -1,21 +1,43 @@
+import { readDesktopUsage } from '@/services/api/desktopUsage';
+import type { DesktopUsageConnection } from './desktopConnection';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiClient } from '@/services/api/client';
 import { usageRecordsApi, type UsageRecord } from '@/services/api/usageRecords';
+import { readUsageCollection, writeUsageCollection } from './preferences';
 import { mergeUsageRecords, parseUsageCsv } from './model';
 import { appendUsageHistory, readUsageHistory, writeUsageHistory } from './storage';
 
-export function useUsageRecords(scope: string, connected: boolean, pageActive: boolean) {
+export function useUsageRecords(
+  scope: string,
+  connected: boolean,
+  pageActive: boolean,
+  desktop: DesktopUsageConnection | null = null,
+  backend = ''
+) {
+  const [error, setError] = useState('');
   const [records, setRecords] = useState<UsageRecord[]>([]);
-  const [collecting, setCollecting] = useState(false);
+  const [collecting, updateCollecting] = useState(() => readUsageCollection(scope));
+  const setCollecting = useCallback(
+    (enabled: boolean) => {
+      try {
+        writeUsageCollection(scope, enabled);
+        updateCollecting(enabled);
+      } catch {
+        updateCollecting(false);
+        setError('storage_error');
+      }
+    },
+    [scope]
+  );
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState('');
   const [lastRead, setLastRead] = useState<number | null>(null);
   const [focused, setFocused] = useState(false);
   const active = useRef(true);
   const running = useRef(false);
   const current = useRef<UsageRecord[]>([]);
   const lastAttempt = useRef(0);
+  const cursor = useRef('0');
   const revision = useRef(apiClient.getConnectionRevision());
   const eligibility = useRef({ pageActive, connected });
   useEffect(() => {
@@ -27,6 +49,7 @@ export function useUsageRecords(scope: string, connected: boolean, pageActive: b
   );
   useEffect(() => {
     active.current = true;
+    let cancelled = false;
     const focus = () =>
       setFocused(document.visibilityState === 'visible' && document.hasFocus() && navigator.onLine);
     focus();
@@ -37,18 +60,19 @@ export function useUsageRecords(scope: string, connected: boolean, pageActive: b
     document.addEventListener('visibilitychange', focus);
     void readUsageHistory(scope)
       .then((saved) => {
-        if (!isCurrent()) return;
+        if (cancelled || !isCurrent()) return;
         current.current = saved;
         setRecords(saved);
         setLoaded(true);
       })
       .catch(() => {
-        if (isCurrent()) {
+        if (!cancelled && isCurrent()) {
           setError('storage_error');
           setLoaded(true);
         }
       });
     return () => {
+      cancelled = true;
       active.current = false;
       window.removeEventListener('focus', focus);
       window.removeEventListener('blur', focus);
@@ -107,8 +131,20 @@ export function useUsageRecords(scope: string, connected: boolean, pageActive: b
       )
         return;
       lastAttempt.current = Date.now();
-      const incoming = await usageRecordsApi.collect();
-      await save(incoming);
+      if (desktop) {
+        for (let page = 0; page < 20; page++) {
+          if (!isCurrent() || !eligibility.current.pageActive || !eligibility.current.connected)
+            return;
+          const batch = await readDesktopUsage(desktop, backend, cursor.current);
+          if (!isCurrent()) return;
+          await save(batch.records);
+          cursor.current = batch.cursor;
+          if (!batch.hasMore) break;
+        }
+      } else {
+        const incoming = await usageRecordsApi.collect();
+        await save(incoming);
+      }
       if (isCurrent()) {
         setError('');
         setLastRead(Date.now());
@@ -126,14 +162,25 @@ export function useUsageRecords(scope: string, connected: boolean, pageActive: b
       } else await perform();
     } catch {
       if (isCurrent()) {
-        setError('collection_error');
+        setError(desktop ? 'desktop_error' : 'collection_error');
         setCollecting(false);
       }
     } finally {
       running.current = false;
       if (isCurrent()) setBusy(false);
     }
-  }, [collecting, connected, loaded, scope, save, isCurrent, pageActive]);
+  }, [
+    collecting,
+    connected,
+    loaded,
+    scope,
+    save,
+    isCurrent,
+    pageActive,
+    setCollecting,
+    desktop,
+    backend,
+  ]);
 
   useEffect(() => {
     if (!collecting || !focused || !pageActive) return;
@@ -188,6 +235,31 @@ export function useUsageRecords(scope: string, connected: boolean, pageActive: b
       if (isCurrent()) setError('storage_error');
     }
   }, [scope, isCurrent]);
+  const recoverDesktop = useCallback(async () => {
+    if (!desktop || !loaded || running.current || !isCurrent()) return;
+    running.current = true;
+    setBusy(true);
+    try {
+      let after = '0';
+      for (let page = 0; page < 20; page++) {
+        if (!isCurrent()) return;
+        const batch = await readDesktopUsage(desktop, backend, after);
+        if (!isCurrent()) return;
+        await save(batch.records);
+        after = batch.cursor;
+        if (!batch.hasMore) break;
+      }
+      if (isCurrent()) {
+        setError('');
+        setLastRead(Date.now());
+      }
+    } catch {
+      if (isCurrent()) setError('desktop_error');
+    } finally {
+      running.current = false;
+      if (isCurrent()) setBusy(false);
+    }
+  }, [desktop, loaded, isCurrent, backend, save]);
   return {
     records,
     collecting,
@@ -201,5 +273,6 @@ export function useUsageRecords(scope: string, connected: boolean, pageActive: b
     importCsv,
     clear,
     reload,
+    recoverDesktop,
   };
 }

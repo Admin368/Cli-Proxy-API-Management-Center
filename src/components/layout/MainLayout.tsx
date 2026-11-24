@@ -352,7 +352,7 @@ export function MainLayout() {
   const fullBrandName = 'CLI Proxy API Management Center';
   const abbrBrandName = t('title.abbr');
   const isLogsPage = location.pathname.startsWith('/logs');
-  const isQuotaPage = location.pathname === '/quota' || location.pathname === '/';
+  const isQuotaPage = location.pathname.startsWith('/quota') || location.pathname === '/';
   const isUsagePage = location.pathname === '/usage';
   const isPluginResourcePage = location.pathname.startsWith('/plugin-pages');
   const showSidebarLabels = !sidebarCollapsed || sidebarOpen;

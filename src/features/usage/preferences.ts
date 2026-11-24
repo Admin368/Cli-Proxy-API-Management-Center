@@ -32,3 +32,28 @@ export function writeUsagePreferences(columns: UsageColumn[], pageSize: number) 
     /* Preferences still apply for this page visit. */
   }
 }
+
+const COLLECTION_KEY = 'usagePage.collection';
+/** Opt-in is scoped to the backend and credential fingerprint, never the raw key. */
+export function readUsageCollection(scope: string): boolean {
+  try {
+    const saved: unknown = JSON.parse(window.localStorage.getItem(COLLECTION_KEY) ?? 'null');
+    return Array.isArray(saved) && saved.includes(scope);
+  } catch {
+    return false;
+  }
+}
+export function writeUsageCollection(scope: string, enabled: boolean) {
+  const saved: unknown = JSON.parse(window.localStorage.getItem(COLLECTION_KEY) ?? 'null');
+  const scopes = new Set(Array.isArray(saved) ? saved.filter((s) => typeof s === 'string') : []);
+  if (enabled) scopes.add(scope);
+  else scopes.delete(scope);
+  window.localStorage.setItem(COLLECTION_KEY, JSON.stringify([...scopes]));
+}
+export function clearUsageCollection() {
+  try {
+    window.localStorage.removeItem(COLLECTION_KEY);
+  } catch {
+    // Storage may be disabled.
+  }
+}

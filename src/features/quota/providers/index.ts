@@ -34,6 +34,8 @@ export interface QuotaCardState {
   error?: string;
   errorStatus?: number;
   cachedAt?: number;
+  /** Time the quota response was received, retained across metadata-only enrichment. */
+  readAt?: number;
   refreshing?: boolean;
   refreshFailed?: boolean;
 }

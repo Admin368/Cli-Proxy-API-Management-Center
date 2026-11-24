@@ -1,3 +1,8 @@
+import { useSharedQuotaForecast } from './useSharedQuotaForecast';
+import { QUOTA_PREFERENCE_RESTORE } from './preferenceEvents';
+import { useNavigate } from 'react-router-dom';
+import { QuotaForecast } from './components/QuotaForecast';
+import { observationFor, saveObservations, type QuotaObservation } from './forecast';
 import { UsageAnalytics } from '@/features/usage/UsageAnalytics';
 /**
  * 额度查询页：提供商 tabs + 统一卡网格。
@@ -60,7 +65,7 @@ import { useQuotaBatchLoader } from './hooks/useQuotaBatchLoader';
 import { useQuotaLive } from './hooks/useQuotaLive';
 import { useQuotaAccountTools } from './hooks/useQuotaAccountTools';
 import { QuotaTimeline } from './components/QuotaTimeline';
-import { readQuotaUiState, writeQuotaUiState } from './uiState';
+import { readQuotaUiState, writeQuotaUiState, isQuotaTabId, isQuotaSortMode } from './uiState';
 import {
   quotaSnapshotScope,
   readQuotaSnapshot,
@@ -80,16 +85,30 @@ const TAB_IDS: string[] = ['all', ...QUOTA_TAB_ORDER];
 const SKELETON_CARD_COUNT = 6;
 const displayNameFor = compactCredentialLabel;
 
-export function QuotaPage() {
+export function QuotaPage({ forecast = false }: { forecast?: boolean } = {}) {
   const apiBase = useAuthStore((state) => state.apiBase);
   const managementKey = useAuthStore((state) => state.managementKey);
   const generation = useQuotaStore((state) => state.cacheGeneration);
   const scope = quotaSnapshotScope(apiBase, managementKey);
-  return <QuotaPageContent key={`${scope}:${generation}`} snapshotScope={scope} />;
+  return (
+    <QuotaPageContent
+      key={`${scope}:${generation}`}
+      snapshotScope={scope}
+      forecastView={forecast}
+    />
+  );
 }
 
-function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
+function QuotaPageContent({
+  snapshotScope,
+  forecastView,
+}: {
+  snapshotScope: string;
+  forecastView: boolean;
+}) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const sharedForecast = useSharedQuotaForecast(snapshotScope);
   const connectionStatus = useAuthStore((state) => state.connectionStatus);
   const resolvedTheme: ResolvedTheme = useThemeStore((state) => state.resolvedTheme);
 
@@ -103,11 +122,20 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
   const [error, setError] = useState('');
   const [tab, setTab] = useState<QuotaTabId>(() => readQuotaUiState()?.tab ?? 'all');
   const [sortMode, setSortMode] = useState<QuotaSortMode>(() => {
-    if (readAvailabilityPreference(snapshotScope)) return 'availability';
     const saved = readQuotaUiState()?.sortMode;
-    return saved === 'availability' ? 'default' : (saved ?? 'default');
+    return saved ?? (readAvailabilityPreference(snapshotScope) ? 'availability' : 'default');
   });
   const [page, setPage] = useState(1);
+  useEffect(() => {
+    const restore = (event: Event) => {
+      const saved = (event as CustomEvent<Record<string, unknown>>).detail ?? readQuotaUiState();
+      if (isQuotaTabId(saved?.tab)) setTab(saved.tab);
+      if (isQuotaSortMode(saved?.sortMode)) setSortMode(saved.sortMode);
+    };
+    window.addEventListener(QUOTA_PREFERENCE_RESTORE, restore);
+    return () => window.removeEventListener(QUOTA_PREFERENCE_RESTORE, restore);
+  }, []);
+
   const [search, setSearch] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   // 页头 + tabs 的入场级联（标题 → meta → 动作 → tabs，级差 70ms）
@@ -231,6 +259,7 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
     )
       return;
     const quotas: QuotaSnapshot['quotas'] = {};
+    const observations: QuotaObservation[] = [];
     const activeKeys = new Set(entries.map((entry) => snapshotKey(entry.type, entry.file)));
     for (const key of successfulReads.current.keys()) {
       if (!activeKeys.has(key)) successfulReads.current.delete(key);
@@ -243,6 +272,8 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
       if (value && current) {
         const previous = successfulReads.current.get(key);
         const savedAt = previous?.value === current ? previous.savedAt : Date.now();
+        if (previous?.value !== current && !fileGenerations[entry.file.name])
+          observations.push(...observationFor(entry, current, savedAt));
         successfulReads.current.set(key, { value: current, savedAt });
         quotas[key] = { type: entry.type, identity, savedAt, value };
       } else {
@@ -251,6 +282,7 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
       }
     }
     const next: QuotaSnapshot = { savedAt: Date.now(), files: files.map(snapshotFile), quotas };
+    saveObservations(snapshotScope, observations);
     writeQuotaSnapshot(snapshotScope, next);
     setSnapshot(next);
   }, [
@@ -469,6 +501,24 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
         onLiveChange={setLive}
       />
 
+      <div role="group" aria-label={t('quota_management.forecast_view')}>
+        <Button
+          size="sm"
+          variant={!forecastView ? 'primary' : 'secondary'}
+          aria-pressed={!forecastView}
+          onClick={() => navigate('/quota')}
+        >
+          {t('quota_management.view_overview')}
+        </Button>{' '}
+        <Button
+          size="sm"
+          variant={forecastView ? 'primary' : 'secondary'}
+          aria-pressed={forecastView}
+          onClick={() => navigate('/quota/forecast')}
+        >
+          {t('quota_management.forecast_view')}
+        </Button>
+      </div>
       <div className={styles.summaryRow}>
         {entries.some((entry) => getQuota(entry)?.cachedAt) && (
           <p role="status" className={styles.cacheStatus}>
@@ -539,107 +589,118 @@ function QuotaPageContent({ snapshotScope }: { snapshotScope: string }) {
           </div>
         )}
 
-        {loading && files.length === 0 ? (
-          <div className={styles.grid} aria-hidden="true">
-            {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
-              <Skeleton key={index} height={168} rounded={14} />
-            ))}
-          </div>
-        ) : isEmpty ? (
-          <EmptyState
-            title={
-              search.trim()
-                ? t('quota_management.search_empty_title')
-                : tab === 'all'
-                  ? t('quota_management.empty_title')
-                  : t(`${QUOTA_ADAPTERS[tab].i18nPrefix}.empty_title`)
-            }
-            description={
-              search.trim()
-                ? t('quota_management.search_empty_desc')
-                : tab === 'all'
-                  ? t('quota_management.empty_desc')
-                  : t(`${QUOTA_ADAPTERS[tab].i18nPrefix}.empty_desc`)
-            }
-            action={
-              search.trim() ? (
-                <Button variant="secondary" size="sm" onClick={() => handleSearchChange('')}>
-                  {t('quota_management.search_clear')}
-                </Button>
-              ) : tab === 'all' ? undefined : (
-                <Button variant="secondary" size="sm" onClick={() => handleTabChange('all')}>
-                  {t('auth_files.filter_all')}
-                </Button>
-              )
-            }
+        {forecastView ? (
+          <QuotaForecast
+            shared={sharedForecast}
+            scope={snapshotScope}
+            entries={filteredEntries}
+            quotaFor={getQuota}
           />
         ) : (
-          <div className={styles.grid}>
-            {pageItems.map((entry, index) => (
-              <QuotaCard
-                key={`${entry.type}:${getQuotaCacheKey(entry.file)}`}
-                entry={entry}
-                quota={getQuota(entry)}
-                requestDataReady={filesGeneration === sessionGeneration && !error}
-                accountActions={accountTools.actionsFor(entry.file)}
-                resolvedTheme={resolvedTheme}
-                canRefresh={canUseActions && !batchLoading && !accountTools.busy}
-                resetting={resettingQuotaName === getQuotaCacheKey(entry.file)}
-                entranceDelayMs={cardEntranceDelay(index)}
-                onRefresh={() => void refreshQuota(entry.file, QUOTA_ADAPTERS[entry.type])}
-                onReset={() => resetQuota(entry.file, QUOTA_ADAPTERS[entry.type])}
+          <>
+            {loading && files.length === 0 ? (
+              <div className={styles.grid} aria-hidden="true">
+                {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
+                  <Skeleton key={index} height={168} rounded={14} />
+                ))}
+              </div>
+            ) : isEmpty ? (
+              <EmptyState
+                title={
+                  search.trim()
+                    ? t('quota_management.search_empty_title')
+                    : tab === 'all'
+                      ? t('quota_management.empty_title')
+                      : t(`${QUOTA_ADAPTERS[tab].i18nPrefix}.empty_title`)
+                }
+                description={
+                  search.trim()
+                    ? t('quota_management.search_empty_desc')
+                    : tab === 'all'
+                      ? t('quota_management.empty_desc')
+                      : t(`${QUOTA_ADAPTERS[tab].i18nPrefix}.empty_desc`)
+                }
+                action={
+                  search.trim() ? (
+                    <Button variant="secondary" size="sm" onClick={() => handleSearchChange('')}>
+                      {t('quota_management.search_clear')}
+                    </Button>
+                  ) : tab === 'all' ? undefined : (
+                    <Button variant="secondary" size="sm" onClick={() => handleTabChange('all')}>
+                      {t('auth_files.filter_all')}
+                    </Button>
+                  )
+                }
               />
-            ))}
-          </div>
-        )}
+            ) : (
+              <div className={styles.grid}>
+                {pageItems.map((entry, index) => (
+                  <QuotaCard
+                    key={`${entry.type}:${getQuotaCacheKey(entry.file)}`}
+                    entry={entry}
+                    quota={getQuota(entry)}
+                    requestDataReady={filesGeneration === sessionGeneration && !error}
+                    accountActions={accountTools.actionsFor(entry.file)}
+                    resolvedTheme={resolvedTheme}
+                    canRefresh={canUseActions && !batchLoading && !accountTools.busy}
+                    resetting={resettingQuotaName === getQuotaCacheKey(entry.file)}
+                    entranceDelayMs={cardEntranceDelay(index)}
+                    onRefresh={() => void refreshQuota(entry.file, QUOTA_ADAPTERS[entry.type])}
+                    onReset={() => resetQuota(entry.file, QUOTA_ADAPTERS[entry.type])}
+                  />
+                ))}
+              </div>
+            )}
 
-        {!loading && filteredEntries.length > QUOTA_PAGE_SIZE && (
-          <div className={styles.pagination}>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage <= 1}
-            >
-              {t('auth_files.pagination_prev')}
-            </Button>
-            <div className={styles.pageInfo}>
-              {t('auth_files.pagination_info', {
-                current: currentPage,
-                total: totalPages,
-                count: filteredEntries.length,
-              })}
-            </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage >= totalPages}
-            >
-              {t('auth_files.pagination_next')}
-            </Button>
-          </div>
-        )}
-        {pageItems.length > 0 && (
-          <div className={styles.timelines}>
-            <QuotaTimeline
-              entries={pageItems}
-              quotaFor={getQuota}
-              displayNameFor={displayNameFor}
-              resolvedTheme={resolvedTheme}
-              fixedMode="session"
-            />
-            <QuotaTimeline
-              entries={pageItems}
-              quotaFor={getQuota}
-              displayNameFor={displayNameFor}
-              resolvedTheme={resolvedTheme}
-              fixedMode="weekly"
-            />
-          </div>
+            {!loading && filteredEntries.length > QUOTA_PAGE_SIZE && (
+              <div className={styles.pagination}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage <= 1}
+                >
+                  {t('auth_files.pagination_prev')}
+                </Button>
+                <div className={styles.pageInfo}>
+                  {t('auth_files.pagination_info', {
+                    current: currentPage,
+                    total: totalPages,
+                    count: filteredEntries.length,
+                  })}
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage >= totalPages}
+                >
+                  {t('auth_files.pagination_next')}
+                </Button>
+              </div>
+            )}
+            {pageItems.length > 0 && (
+              <div className={styles.timelines}>
+                <QuotaTimeline
+                  entries={pageItems}
+                  quotaFor={getQuota}
+                  displayNameFor={displayNameFor}
+                  resolvedTheme={resolvedTheme}
+                  fixedMode="session"
+                />
+                <QuotaTimeline
+                  entries={pageItems}
+                  quotaFor={getQuota}
+                  displayNameFor={displayNameFor}
+                  resolvedTheme={resolvedTheme}
+                  fixedMode="weekly"
+                />
+              </div>
+            )}
+          </>
         )}
       </section>
-      <UsageAnalytics />
+      {!forecastView && <UsageAnalytics />}
       {accountTools.dialogs}
     </div>
   );

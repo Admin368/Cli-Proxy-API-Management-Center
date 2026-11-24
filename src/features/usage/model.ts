@@ -14,6 +14,8 @@ export function mergeUsageRecords(previous: UsageRecord[], incoming: UsageRecord
 
 export interface UsageFilters {
   hours: number;
+  from?: number;
+  to?: number;
   model: string;
   source: string;
   key: string;
@@ -25,8 +27,10 @@ export function filterUsageRecords(records: UsageRecord[], filters: UsageFilters
   return records.filter(
     (record) =>
       (!filters.hours || record.timestamp >= now - filters.hours * 60 * 60_000) &&
+      (filters.from === undefined || record.timestamp >= filters.from) &&
+      (filters.to === undefined || record.timestamp < filters.to) &&
       (!filters.model || record.model === filters.model) &&
-      (!filters.source || record.source === filters.source) &&
+      (!filters.source || (record.accountId || record.source) === filters.source) &&
       (!filters.key || record.keyId === filters.key) &&
       (!filters.result ||
         (filters.result === 'canceled'
@@ -93,6 +97,8 @@ export function usageCsv(records: UsageRecord[]): string {
     'provider',
     'source',
     'api_key_hash',
+    'account_id',
+    'log_request_id',
     'failed',
     'canceled',
     'reasoning_effort',
@@ -123,6 +129,8 @@ export function usageCsv(records: UsageRecord[]): string {
         r.provider,
         r.source,
         r.keyId,
+        r.accountId,
+        r.requestId,
         r.failed,
         r.canceled,
         r.effort,
@@ -140,4 +148,26 @@ export function usageCsv(records: UsageRecord[]): string {
       .map((row) => row.map(cell).join(','))
       .join('\r\n')
   );
+}
+
+export function usageFiltersFromHash(hash: string): UsageFilters {
+  const query = new URLSearchParams(hash.split('?')[1] ?? '');
+  const from = Number(query.get('from'));
+  const to = Number(query.get('to'));
+  const range =
+    query.has('from') &&
+    query.has('to') &&
+    Number.isFinite(from) &&
+    Number.isFinite(to) &&
+    to > from;
+  const hours = Number(query.get('hours') ?? 24);
+  return {
+    hours: range ? 0 : [0, 1, 24, 72, 168, 720].includes(hours) ? hours : 24,
+    model: query.get('model') ?? '',
+    source: query.get('source') ?? '',
+    key: '',
+    result: '',
+    search: '',
+    ...(range ? { from, to } : {}),
+  };
 }

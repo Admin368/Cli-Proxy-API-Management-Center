@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import { readDesktopUsageConnection } from './desktopConnection';
+import { accountUsageSummary } from './accountSummary';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '@/stores';
@@ -8,7 +10,8 @@ import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { compactCredentialLabel } from '@/features/quota/credentialLabel';
 import { useUsageRecords } from './useUsageRecords';
-import { hourlyUsage, usageSeries } from './analytics';
+import { useUsageAccountLabels } from './useUsageAccountLabels';
+import { hourlyUsage, usageSeries, usageAccountKey } from './analytics';
 import styles from './UsageAnalytics.module.scss';
 
 const colors = ['#60a5fa', '#34d399', '#c084fc', '#fbbf24', '#fb7185', '#22d3ee', '#94a3b8'];
@@ -21,8 +24,19 @@ export function UsageAnalytics() {
 function AnalyticsContent({ scope }: { scope: string }) {
   const { t, i18n } = useTranslation();
   // Read the local history only. Never consume the destructive shared queue here.
-  const history = useUsageRecords(scope, false, false);
+  const base = useAuthStore((s) => s.apiBase);
+  const [desktop] = useState(() => readDesktopUsageConnection(scope));
+  const history = useUsageRecords(scope, false, false, desktop, base);
+  const { loaded, records, recoverDesktop } = history;
+  const recoveryAttempted = useRef(false);
+  useEffect(() => {
+    if (desktop && loaded && !recoveryAttempted.current && records.some((r) => !r.accountId)) {
+      recoveryAttempted.current = true;
+      void recoverDesktop();
+    }
+  }, [desktop, loaded, records, recoverDesktop]);
   const now = useNow();
+  const accountLabels = useUsageAccountLabels(scope);
   const [hours, setHours] = useState(24);
   const [model, setModel] = useState('');
   const [account, setAccount] = useState('');
@@ -43,16 +57,20 @@ function AnalyticsContent({ scope }: { scope: string }) {
     key === null
       ? t('analytics.other')
       : key
-        ? compactCredentialLabel(key)
+        ? accountLabels.get(key) ||
+          (/^[a-f0-9]{64}$/.test(key)
+            ? t('analytics.account_id', { id: key.slice(0, 8) })
+            : compactCredentialLabel(key))
         : t('analytics.unknown');
   const models = [...new Set(history.records.map((r) => r.model))].sort();
-  const accounts = [...new Set(history.records.map((r) => r.source))].sort();
+  const accounts = [...new Set(history.records.map(usageAccountKey))].sort();
   const { buckets, selected } = useMemo(
     () =>
       hourlyUsage(
         history.records.filter(
           (r) =>
-            (!model || r.model === model) && (!account || (r.source || '__unknown') === account)
+            (!model || r.model === model) &&
+            (!account || (usageAccountKey(r) || '__unknown') === account)
         ),
         hours,
         now
@@ -70,6 +88,8 @@ function AnalyticsContent({ scope }: { scope: string }) {
     }),
     { tokens: 0, success: 0, known: 0 }
   );
+  const perAccount = accountUsageSummary(selected);
+  const attributed = selected.filter((r) => r.accountId || r.source).length;
   const breakdown = (['input', 'cacheRead', 'cacheWrite', 'output', 'reasoning'] as const).map(
     (key) => ({
       key,
@@ -91,6 +111,16 @@ function AnalyticsContent({ scope }: { scope: string }) {
         <Button variant="secondary" size="sm" onClick={() => void history.reload()}>
           {t('analytics.reload')}
         </Button>
+        {desktop && (
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={history.busy || !history.loaded}
+            onClick={() => void history.recoverDesktop()}
+          >
+            {t('analytics.recover')}
+          </Button>
+        )}
       </div>
       <p className={styles.note}>{t('analytics.notice')}</p>
       <div className={styles.filters}>
@@ -186,18 +216,24 @@ function AnalyticsContent({ scope }: { scope: string }) {
                       const value = series.values[i];
                       accumulated += value;
                       return (
-                        <rect
+                        <a
                           key={j}
-                          x={left + i * step + 2}
-                          y={y(accumulated)}
-                          width={Math.max(1, step - 4)}
-                          height={(value / max) * 210}
-                          fill={colors[j]}
+                          href={`#/usage?from=${b.at}&to=${b.at + 3_600_000}&${view === 'account' ? 'source' : 'model'}=${encodeURIComponent(series.key ?? '')}`}
+                          tabIndex={0}
+                          aria-label={`${date(b.at)}: ${label(series.key)}`}
                         >
-                          <title>
-                            {date(b.at)} · {label(series.key)}: {format(value)}
-                          </title>
-                        </rect>
+                          <rect
+                            x={left + i * step + 2}
+                            y={y(accumulated)}
+                            width={Math.max(1, step - 4)}
+                            height={(value / max) * 210}
+                            fill={colors[j]}
+                          >
+                            <title>
+                              {date(b.at)} · {label(series.key)}: {format(value)}
+                            </title>
+                          </rect>
+                        </a>
                       );
                     })}
                     {i % Math.ceil(hours / 6) === 0 && (
@@ -269,6 +305,52 @@ function AnalyticsContent({ scope }: { scope: string }) {
           </details>
         </>
       )}
+      <p className={styles.note}>
+        {t('analytics.attribution', { count: attributed, total: selected.length })}
+      </p>
+      <details open>
+        <summary>{t('analytics.account_usage')}</summary>
+        <div className={styles.table}>
+          <table>
+            <thead>
+              <tr>
+                {[
+                  'accounts',
+                  'requests',
+                  'tokens',
+                  'cache_share',
+                  'cacheWrite',
+                  'output',
+                  'failures',
+                ].map((field) => (
+                  <th key={field}>{t(`analytics.${field}`)}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {perAccount.map((row) => (
+                <tr key={row.key}>
+                  <td>
+                    <Link to={`/usage?source=${encodeURIComponent(row.key)}&hours=${hours}`}>
+                      {label(row.key)}
+                    </Link>
+                  </td>
+                  <td>{format(row.requests)}</td>
+                  <td>{row.known ? format(row.total) : '—'}</td>
+                  <td title={t('analytics.cache_share_hint')}>
+                    {row.cacheKnown
+                      ? `${((row.cacheRead / row.cacheInput) * 100).toFixed(1)}%`
+                      : '—'}
+                  </td>
+                  <td>{row.writeKnown ? format(row.cacheWrite) : '—'}</td>
+                  <td>{row.outputKnown ? format(row.output) : '—'}</td>
+                  <td>{format(row.failures)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
       <div className={styles.breakdown}>
         {breakdown.map((b) => (
           <div key={b.key}>

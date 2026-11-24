@@ -44,7 +44,7 @@ export function useQuotaActions(disableControls: boolean) {
       try {
         const data = await adapter.fetchQuota(file, t);
         commitIfQuotaCacheCurrent(cacheGeneration, () => {
-          const successState = adapter.buildSuccessState(data);
+          const successState = { ...adapter.buildSuccessState(data), readAt: Date.now() };
           setQuota((prev) => ({
             ...prev,
             [cacheKey]: successState,
@@ -93,7 +93,7 @@ export function useQuotaActions(disableControls: boolean) {
             commitIfQuotaCacheCurrent(cacheGeneration, () => {
               setQuota((prev) => ({
                 ...prev,
-                [cacheKey]: adapter.buildSuccessState(data),
+                [cacheKey]: { ...adapter.buildSuccessState(data), readAt: Date.now() },
               }));
               showNotification(t('codex_quota.reset_success', { name: file.name }), 'success');
             });

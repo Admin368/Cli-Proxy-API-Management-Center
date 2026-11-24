@@ -9,6 +9,8 @@ export interface UsageRecord {
   effort: string;
   provider: string;
   source: string;
+  accountId?: string;
+  requestId?: string;
   keyId: string;
   failed: boolean;
   canceled: boolean;
@@ -61,6 +63,14 @@ export function normalizeUsageRecord(value: unknown): UsageRecord | null {
     : rawKey
       ? usageFingerprint(rawKey)
       : '';
+  const suppliedAccount = text(row.account_id);
+  const authIndex =
+    typeof row.auth_index === 'number' ? String(row.auth_index) : text(row.auth_index);
+  const accountId = /^[a-f0-9]{64}$/i.test(suppliedAccount)
+    ? suppliedAccount.toLowerCase()
+    : authIndex
+      ? usageFingerprint('auth:' + authIndex)
+      : '';
   const source = safeSource(row.source_display) || safeSource(row.source);
   return {
     id: /^[a-f0-9]{64}$/i.test(id) ? id.toLowerCase() : usageFingerprint(id),
@@ -70,6 +80,10 @@ export function normalizeUsageRecord(value: unknown): UsageRecord | null {
     provider: text(row.provider),
     source: rawKey && source === rawKey ? '' : source,
     keyId,
+    ...(accountId ? { accountId } : {}),
+    ...(/^[\w.:-]{1,128}$/.test(text(row.log_request_id) || text(row.request_id))
+      ? { requestId: text(row.log_request_id) || text(row.request_id) }
+      : {}),
     failed: bool(row.failed),
     canceled:
       bool(row.canceled) || (bool(row.failed) && number(object(row.fail).status_code) === 499),
@@ -119,6 +133,8 @@ export function restoreUsageRecord(value: unknown): UsageRecord | null {
     provider: row.provider,
     source: row.source,
     api_key_hash: row.keyId,
+    account_id: row.accountId,
+    log_request_id: row.requestId,
     failed: row.failed,
     canceled: row.canceled,
     input_tokens: row.input,

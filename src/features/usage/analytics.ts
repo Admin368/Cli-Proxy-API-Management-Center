@@ -1,5 +1,7 @@
 import type { UsageRecord } from '@/services/api/usageRecords';
 
+export const usageAccountKey = (record: UsageRecord) => record.accountId || record.source;
+
 export const HOUR = 3_600_000;
 export interface UsageBucket {
   at: number;
@@ -27,7 +29,8 @@ export function hourlyUsage(records: UsageRecord[], hours: number, now: number) 
     if (r.total === null) continue;
     b.total += r.total;
     b.models[r.model] = (b.models[r.model] ?? 0) + r.total;
-    b.accounts[r.source] = (b.accounts[r.source] ?? 0) + r.total;
+    const account = usageAccountKey(r);
+    b.accounts[account] = (b.accounts[account] ?? 0) + r.total;
   }
   return { buckets, selected };
 }

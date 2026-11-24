@@ -123,11 +123,13 @@ export function quotaSnapshotScope(apiBase: string, managementKey: string): stri
 
 const fileSchema: Schema = {
   ...fields('name type provider quotaProvider quotaPluginId email projectId', 'string'),
+  authIndex: 'string',
   ...fields('supportsQuota disabled', 'boolean'),
   ...fields('modified success failed', 'number'),
 };
 export function snapshotFile(file: AuthFileItem): AuthFileItem {
   const safe = project(file, fileSchema) as AuthFileItem;
+  if (file.authIndex != null) safe.authIndex = String(file.authIndex);
   for (const field of ['success', 'failed'] as const) {
     if (typeof file[field] === 'number' || typeof file[field] === 'string') {
       safe[field] = normalizeUsageTotal(file[field]);

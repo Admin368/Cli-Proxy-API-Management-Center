@@ -27,7 +27,10 @@ function installSessionStorage() {
       return store.size;
     },
   };
-  (globalThis as unknown as { window: unknown }).window = { sessionStorage: storage };
+  (globalThis as unknown as { window: unknown }).window = {
+    sessionStorage: storage,
+    localStorage: storage,
+  };
   return storage;
 }
 

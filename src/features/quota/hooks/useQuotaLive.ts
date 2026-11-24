@@ -59,7 +59,6 @@ export function useQuotaLive(options: Options) {
           !current.connected ||
           current.busy ||
           document.visibilityState !== 'visible' ||
-          !document.hasFocus() ||
           !navigator.onLine ||
           current.generation !== useQuotaStore.getState().cacheGeneration
         )

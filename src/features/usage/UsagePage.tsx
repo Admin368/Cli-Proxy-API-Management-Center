@@ -1,3 +1,12 @@
+import { RequestInspector } from './RequestInspector';
+import { useUsageAccountLabels } from './useUsageAccountLabels';
+import { DesktopUsageSettings } from './DesktopUsageSettings';
+import {
+  readDesktopUsageConnection,
+  writeDesktopUsageConnection,
+  type DesktopUsageConnection,
+} from './desktopConnection';
+import { writeUsageCollection } from './preferences';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
@@ -10,7 +19,7 @@ import { compactCredentialLabel } from '@/features/quota/credentialLabel';
 import { useNow } from '@/hooks/useNow';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { usePageTransitionLayer } from '@/components/common/PageTransitionLayer';
-import { filterUsageRecords, usageCsv, type UsageFilters } from './model';
+import { filterUsageRecords, usageCsv, usageFiltersFromHash, type UsageFilters } from './model';
 import { useUsageRecords } from './useUsageRecords';
 import styles from './UsagePage.module.scss';
 import { readUsagePreferences, writeUsagePreferences, type UsageColumn } from './preferences';
@@ -25,11 +34,35 @@ export function UsagePage() {
   const connected = useAuthStore((state) => state.connectionStatus === 'connected');
   const scope = usageFingerprint(JSON.stringify([apiBase, managementKey]));
   return (
-    <UsageContent
+    <UsageConnection
       key={scope}
+      backend={apiBase}
       scope={scope}
       connected={connected}
       pageActive={layer?.isCurrentLayer ?? true}
+    />
+  );
+}
+
+function UsageConnection(props: {
+  scope: string;
+  connected: boolean;
+  pageActive: boolean;
+  backend: string;
+}) {
+  const [desktop, setDesktop] = useState(() => readDesktopUsageConnection(props.scope));
+  const changeDesktop = (value: DesktopUsageConnection | null) => {
+    // Switching sources requires a new opt-in, particularly when returning to the shared queue.
+    writeUsageCollection(props.scope, false);
+    writeDesktopUsageConnection(props.scope, value);
+    setDesktop(value);
+  };
+  return (
+    <UsageContent
+      {...props}
+      key={usageFingerprint(JSON.stringify(desktop))}
+      desktop={desktop}
+      changeDesktop={changeDesktop}
     />
   );
 }
@@ -38,13 +71,20 @@ function UsageContent({
   scope,
   connected,
   pageActive,
+  backend,
+  desktop,
+  changeDesktop,
 }: {
   scope: string;
   connected: boolean;
   pageActive: boolean;
+  backend: string;
+  desktop: DesktopUsageConnection | null;
+  changeDesktop: (value: DesktopUsageConnection | null) => void;
 }) {
   const { t, i18n } = useTranslation();
-  const history = useUsageRecords(scope, connected, pageActive);
+  const accountLabels = useUsageAccountLabels(scope);
+  const history = useUsageRecords(scope, connected, pageActive, desktop, backend);
   const { collecting, collect, reload } = history;
   const refresh = useCallback(async () => {
     await reload();
@@ -53,17 +93,13 @@ function UsageContent({
   useHeaderRefresh(refresh, pageActive);
   const confirm = useNotificationStore((state) => state.showConfirmation);
   const fileInput = useRef<HTMLInputElement>(null);
-  const [filters, setFilters] = useState<UsageFilters>({
-    hours: 24,
-    model: '',
-    source: '',
-    key: '',
-    result: '',
-    search: '',
-  });
+  const [filters, setFilters] = useState<UsageFilters>(() =>
+    usageFiltersFromHash(typeof window === 'undefined' ? '' : (window.location?.hash ?? ''))
+  );
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(() => readUsagePreferences().pageSize);
   const [columns, setColumns] = useState<Column[]>(() => readUsagePreferences().columns);
+  const [inspected, setInspected] = useState<UsageRecord | null>(null);
   const now = useNow();
   const filtered = useMemo(
     () => filterUsageRecords(history.records, filters, now),
@@ -90,7 +126,13 @@ function UsageContent({
   };
   const choices = (key: 'model' | 'source' | 'keyId', all: string) => [
     { value: '', label: t(`usage.${all}`) },
-    ...[...new Set(history.records.map((record) => record[key]).filter(Boolean))]
+    ...[
+      ...new Set(
+        history.records
+          .map((record) => (key === 'source' ? record.accountId || record.source : record[key]))
+          .filter(Boolean)
+      ),
+    ]
       .sort()
       .map((value) => ({
         value,
@@ -98,7 +140,10 @@ function UsageContent({
           key === 'keyId'
             ? t('usage.key_label', { id: value.slice(0, 8) })
             : key === 'source'
-              ? compactCredentialLabel(value)
+              ? accountLabels.get(value) ||
+                (/^[a-f0-9]{64}$/.test(value)
+                  ? t('analytics.account_id', { id: value.slice(0, 8) })
+                  : compactCredentialLabel(value))
               : value,
       })),
   ];
@@ -109,7 +154,7 @@ function UsageContent({
     }
     confirm({
       title: t('usage.collect_title'),
-      message: t('usage.queue_notice'),
+      message: t(desktop ? 'usage.desktop_notice' : 'usage.queue_notice'),
       confirmText: t('usage.start'),
       onConfirm: () => history.setCollecting(true),
     });
@@ -141,12 +186,24 @@ function UsageContent({
           <small>{date.toLocaleDateString(i18n.resolvedLanguage)}</small>
         </td>
         <td>
-          <strong>{record.model || '—'}</strong>
+          <button
+            type="button"
+            className={styles.inspectButton}
+            onClick={() => setInspected(record)}
+            aria-label={`${t('usage.inspect')}: ${record.model}`}
+          >
+            <strong>{record.model || '—'}</strong>
+          </button>
           <small>{[record.provider, record.effort].filter(Boolean).join(' · ') || '—'}</small>
         </td>
         {visible('source') && (
           <td className={styles.source} title={record.source}>
-            {record.source ? compactCredentialLabel(record.source) : t('usage.hidden_source')}
+            {record.accountId
+              ? accountLabels.get(record.accountId) ||
+                t('analytics.account_id', { id: record.accountId.slice(0, 8) })
+              : record.source
+                ? compactCredentialLabel(record.source)
+                : t('usage.hidden_source')}
           </td>
         )}
         {visible('key') && (
@@ -209,13 +266,35 @@ function UsageContent({
 
   return (
     <div className={styles.page}>
+      {inspected && (
+        <RequestInspector
+          key={inspected.id}
+          record={inspected}
+          account={
+            inspected.accountId
+              ? accountLabels.get(inspected.accountId) ||
+                t('analytics.account_id', { id: inspected.accountId.slice(0, 8) })
+              : inspected.source || t('analytics.unknown')
+          }
+          onClose={() => setInspected(null)}
+        />
+      )}
       <header className={styles.header}>
         <div>
-          <p className={styles.eyebrow}>{t('usage.usage')}</p>
           <h1>{t('usage.title')}</h1>
         </div>
         <div className={styles.actions}>
-          <span className={styles.status} role="status">
+          <span
+            className={styles.status}
+            role="status"
+            title={
+              history.lastRead
+                ? t('usage.updated', {
+                    time: new Date(history.lastRead).toLocaleTimeString(i18n.resolvedLanguage),
+                  })
+                : undefined
+            }
+          >
             {t(
               `usage.${history.collecting ? (history.focused && connected ? 'collecting' : 'paused') : 'collection_off'}`
             )}{' '}
@@ -237,7 +316,6 @@ function UsageContent({
           </Button>
         </div>
       </header>
-      <p className={styles.hint}>{t('usage.history_hint')}</p>
       {history.error && (
         <div className={styles.error} role="alert">
           {t(`usage.${history.error}`)}
@@ -265,35 +343,49 @@ function UsageContent({
           <strong>{numeric.format(failures)}</strong>
         </div>
       </section>
+      {filters.from !== undefined && (
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => change({ from: undefined, to: undefined, hours: 24 })}
+        >
+          {t('usage.range_filter', { time: new Date(filters.from).toLocaleString() })}
+        </Button>
+      )}
       <div className={styles.filters}>
         <Select
+          size="sm"
           ariaLabel={t('usage.period')}
           value={String(filters.hours)}
-          onChange={(value) => change({ hours: Number(value) })}
-          options={[1, 24, 168, 720, 0].map((value) => ({
+          onChange={(value) => change({ hours: Number(value), from: undefined, to: undefined })}
+          options={[1, 24, 72, 168, 720, 0].map((value) => ({
             value: String(value),
             label: t(value ? 'usage.last_hours' : 'usage.all_time', { count: value }),
           }))}
         />
         <Select
+          size="sm"
           ariaLabel={t('usage.model')}
           value={filters.model}
           onChange={(model) => change({ model })}
           options={choices('model', 'all_models')}
         />
         <Select
+          size="sm"
           ariaLabel={t('usage.source')}
           value={filters.source}
           onChange={(source) => change({ source })}
           options={choices('source', 'all_sources')}
         />
         <Select
+          size="sm"
           ariaLabel={t('usage.key')}
           value={filters.key}
           onChange={(key) => change({ key })}
           options={choices('keyId', 'all_keys')}
         />
         <Select
+          size="sm"
           ariaLabel={t('usage.result')}
           value={filters.result}
           onChange={(result) => change({ result })}
@@ -350,6 +442,12 @@ function UsageContent({
         </table>
       </div>
       <footer className={styles.footer}>
+        <DesktopUsageSettings
+          className={styles.setup}
+          connection={desktop}
+          onChange={changeDesktop}
+          disabled={history.busy || !history.loaded}
+        />
         <span>
           {t('usage.showing', {
             start: filtered.length ? start + 1 : 0,
@@ -417,7 +515,9 @@ function UsageContent({
         </Button>
         <div className={styles.pagination}>
           <Select
+            size="sm"
             ariaLabel={t('usage.page_size')}
+            fullWidth={false}
             value={String(pageSize)}
             options={[25, 50, 100].map((value) => ({
               value: String(value),
@@ -450,11 +550,6 @@ function UsageContent({
           </Button>
         </div>
       </footer>
-      <p className={styles.hint}>
-        {t('usage.retention')}
-        {history.lastRead &&
-          ` · ${t('usage.updated', { time: new Date(history.lastRead).toLocaleTimeString(i18n.resolvedLanguage) })}`}
-      </p>
     </div>
   );
 }
