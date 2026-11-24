@@ -28,7 +28,8 @@ export function useQuotaActions(disableControls: boolean) {
 
   const refreshQuota = useCallback(
     async (file: AuthFileItem, adapter: QuotaAdapter) => {
-      if (disableControls || file.disabled) return;
+      // Quota lookup is read-only and does not re-enable inference routing.
+      if (disableControls) return;
       const cacheKey = getQuotaCacheKey(file);
       if (resettingQuotaName === cacheKey) return;
       if (getQuotaState(adapter, file)?.status === 'loading') return;
@@ -43,7 +44,7 @@ export function useQuotaActions(disableControls: boolean) {
       try {
         const data = await adapter.fetchQuota(file, t);
         commitIfQuotaCacheCurrent(cacheGeneration, () => {
-          const successState = adapter.buildSuccessState(data);
+          const successState = { ...adapter.buildSuccessState(data), readAt: Date.now() };
           setQuota((prev) => ({
             ...prev,
             [cacheKey]: successState,
@@ -92,7 +93,7 @@ export function useQuotaActions(disableControls: boolean) {
             commitIfQuotaCacheCurrent(cacheGeneration, () => {
               setQuota((prev) => ({
                 ...prev,
-                [cacheKey]: adapter.buildSuccessState(data),
+                [cacheKey]: { ...adapter.buildSuccessState(data), readAt: Date.now() },
               }));
               showNotification(t('codex_quota.reset_success', { name: file.name }), 'success');
             });

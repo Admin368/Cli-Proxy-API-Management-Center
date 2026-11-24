@@ -1,0 +1,94 @@
+.forecast {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.controls {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(100px, 1fr)) auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.note {
+  margin: 6px 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.provider {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 14px;
+  min-width: 0;
+  background: var(--bg-secondary);
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    align-items: baseline;
+    font-size: 13px;
+    > b {
+      margin-left: auto;
+      font-size: 20px;
+    }
+  }
+}
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 10px 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.chart {
+  overflow-x: auto;
+  svg {
+    display: block;
+    width: 100%;
+    min-width: 680px;
+  }
+  text {
+    fill: var(--text-secondary);
+    font-size: 11px;
+  }
+}
+.grid {
+  stroke: var(--border-color);
+  stroke-dasharray: 3 4;
+}
+.recorded,
+.projected {
+  fill: none;
+  stroke: var(--viz-success);
+  stroke-width: 2;
+}
+.projected {
+  stroke: var(--amber-color);
+  stroke-dasharray: 6 4;
+}
+.reset {
+  fill: var(--amber-color);
+}
+.accounts {
+  overflow: auto;
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  th,
+  td {
+    padding: 7px 10px;
+    text-align: left;
+    border-top: 1px solid var(--border-color);
+    white-space: nowrap;
+  }
+}
+@media (max-width: 800px) {
+  .controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

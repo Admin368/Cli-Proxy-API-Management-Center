@@ -93,8 +93,8 @@ describe('Meta quota timeline lane', () => {
     expect(lane.periodHours).toBe(168);
     expect(lane.remaining).toBe(60);
     expect(lane.limits).toEqual([
-      { label: 'meta_quota.window', remaining: 100 },
-      { label: 'meta_quota.weekly', remaining: 60 },
+      { label: 'meta_quota.window', remaining: 100, resetAtMs: NOW_MS + 60 * 60 * 1000 },
+      { label: 'meta_quota.weekly', remaining: 60, resetAtMs: NOW_MS + 7 * 24 * 60 * 60 * 1000 },
     ]);
   });
 

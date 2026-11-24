@@ -21,6 +21,28 @@
     box-shadow var(--dur-hover, 200ms) var(--ease-out-strong, ease-out);
 }
 
+.disabledBadge {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 2px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  font-size: 10px;
+}
+
+@media (min-width: 1100px) {
+  .card {
+    gap: 5px;
+    padding: 8px 12px;
+  }
+
+  .card .body {
+    gap: 3px;
+  }
+}
+
 @media (hover: hover) and (pointer: fine) {
   .card:hover {
     transform: translateY(-2px);

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useQuotaStore } from '@/stores/useQuotaStore';
 import { getQuotaCacheKey } from '@/utils/quota/identity';
+import { isDisabledAuthFile } from '@/utils/quota/validators';
 import type { QuotaFileEntry } from '../../logic';
 
 /** Devin's active management query runs once per visible credential per visit.
@@ -18,7 +19,7 @@ export function useDevinQuotaAutoLoad(
   useEffect(() => {
     if (disabled) return;
     const targets = entries.filter(({ type, file }) => {
-      if (type !== 'devin') return false;
+      if (type !== 'devin' || isDisabledAuthFile(file)) return false;
       const key = JSON.stringify([
         session,
         fileGenerations[file.name] ?? 0,

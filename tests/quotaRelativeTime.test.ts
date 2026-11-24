@@ -51,6 +51,28 @@ describe('relativeTimeParts', () => {
 });
 
 describe('formatRelativeInstant', () => {
+  test('includes total hours while the future countdown reads one day', () => {
+    for (const hours of [24, 30, 47]) {
+      const text = formatRelativeInstant(NOW + hours * HOUR_MS, NOW, 'en');
+      expect(text).toContain('in 1 day');
+      expect(text).toContain(
+        new Intl.NumberFormat('en', { style: 'unit', unit: 'hour', unitDisplay: 'long' }).format(
+          hours
+        )
+      );
+    }
+    expect(formatRelativeInstant(NOW + 23 * HOUR_MS, NOW, 'en')).toBe('in 23 hours');
+    expect(formatRelativeInstant(NOW + 2 * DAY_MS, NOW, 'en')).toBe('in 2 days');
+    expect(formatRelativeInstant(NOW - DAY_MS, NOW, 'en')).toBe('1 day ago');
+    for (const locale of ['zh-CN', 'zh-TW', 'ru', 'vi', 'ko']) {
+      expect(formatRelativeInstant(NOW + 30 * HOUR_MS, NOW, locale)).toContain(
+        new Intl.NumberFormat(locale, { style: 'unit', unit: 'hour', unitDisplay: 'long' }).format(
+          30
+        )
+      );
+    }
+  });
+
   test('renders in the requested locale', () => {
     expect(formatRelativeInstant(NOW + 11 * DAY_MS, NOW, 'en')).toContain('days');
     expect(formatRelativeInstant(NOW + 11 * DAY_MS, NOW, 'zh-CN')).toContain('天');
@@ -122,6 +144,8 @@ describe('buildResetDisplay', () => {
 
   test('rejects a non-finite instant', () => {
     expect(buildResetDisplay(undefined, Number.NaN, NOW, 'en')).toBeNull();
-    expect(buildResetDisplay('08-13 14:30', Number.POSITIVE_INFINITY, NOW, 'en')?.relative).toBeNull();
+    expect(
+      buildResetDisplay('08-13 14:30', Number.POSITIVE_INFINITY, NOW, 'en')?.relative
+    ).toBeNull();
   });
 });

@@ -56,24 +56,43 @@ describe('resolveQuotaProviderType', () => {
 });
 
 describe('classifyQuotaFiles', () => {
-  test('drops unsupported and disabled files', () => {
+  test('keeps disabled built-in and plugin providers without mutating their metadata', () => {
+    const files = ['claude', 'codex', 'antigravity', 'xai', 'kimi', 'devin', 'meta'].map(
+      (provider) => file(`${provider}.json`, provider, { disabled: true })
+    );
+    files.push(file('plugin.json', 'custom', { disabled: true, supportsQuota: true }));
+    const entries = classifyQuotaFiles(files);
+    expect(entries).toHaveLength(8);
+    expect(entries.every((entry) => entry.file.disabled === true)).toBe(true);
+    expect(entries.every((entry) => files.includes(entry.file))).toBe(true);
+  });
+  test('keeps disabled supported files visible without changing their disabled state', () => {
     const entries = classifyQuotaFiles(FILES);
     expect(entries.map((entry) => entry.file.name)).not.toContain('gemini-a.json');
-    expect(entries.map((entry) => entry.file.name)).not.toContain('claude-off.json');
-    expect(entries).toHaveLength(5);
+    expect(entries.find((entry) => entry.file.name === 'claude-off.json')?.file.disabled).toBe(
+      true
+    );
+    expect(entries).toHaveLength(6);
   });
 
   test('orders entries by provider tab order', () => {
     const entries = classifyQuotaFiles(FILES);
-    expect(entries.map((entry) => entry.type)).toEqual(['claude', 'codex', 'codex', 'xai', 'kimi']);
+    expect(entries.map((entry) => entry.type)).toEqual([
+      'claude',
+      'claude',
+      'codex',
+      'codex',
+      'xai',
+      'kimi',
+    ]);
   });
 });
 
 describe('buildTabCounts', () => {
   test('counts per provider plus an all total, zero-filling empty tabs', () => {
     expect(buildTabCounts(classifyQuotaFiles(FILES))).toEqual({
-      all: 5,
-      claude: 1,
+      all: 6,
+      claude: 2,
       antigravity: 0,
       codex: 2,
       xai: 1,
@@ -89,7 +108,7 @@ describe('filterEntriesByTab', () => {
   const entries = classifyQuotaFiles(FILES);
 
   test("passes everything through on the 'all' tab", () => {
-    expect(filterEntriesByTab(entries, 'all')).toHaveLength(5);
+    expect(filterEntriesByTab(entries, 'all')).toHaveLength(6);
   });
 
   test('filters to a single provider', () => {
@@ -218,6 +237,7 @@ describe('sortQuotaEntries', () => {
       'kimi-a.json',
       'codex-a.json',
       'codex-b.json',
+      'claude-off.json',
     ]);
   });
 
@@ -233,6 +253,7 @@ describe('sortQuotaEntries', () => {
       'codex-b.json',
       // unresolved tail, in the order classifyQuotaFiles produced
       'claude-a.json',
+      'claude-off.json',
       'codex-a.json',
       'grok-a.json',
     ]);

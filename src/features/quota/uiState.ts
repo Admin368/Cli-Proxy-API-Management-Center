@@ -1,3 +1,4 @@
+import { announceQuotaPreferenceChange } from './preferenceEvents';
 import {
   QUOTA_SORT_MODES,
   QUOTA_TAB_ORDER,
@@ -5,7 +6,7 @@ import {
   type QuotaTabId,
 } from './constants';
 
-/** 额度页 UI 偏好：会话级持久化（sessionStorage），跨会话不携带。 */
+/** Durable quota filters; read old session-only selections during migration. */
 export type QuotaUiState = {
   tab?: QuotaTabId;
   sortMode?: QuotaSortMode;
@@ -25,7 +26,9 @@ export const isQuotaSortMode = (value: unknown): value is QuotaSortMode =>
 export const readQuotaUiState = (): QuotaUiState | null => {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = window.sessionStorage.getItem(QUOTA_UI_STATE_KEY);
+    const raw =
+      window.localStorage?.getItem(QUOTA_UI_STATE_KEY) ??
+      window.sessionStorage.getItem(QUOTA_UI_STATE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as QuotaUiState;
     if (!parsed || typeof parsed !== 'object') return null;
@@ -45,12 +48,13 @@ export const readQuotaUiState = (): QuotaUiState | null => {
  * the sort control — so a whole-object write would silently drop the other
  * field every time either one changed.
  */
-export const writeQuotaUiState = (state: QuotaUiState) => {
+export const writeQuotaUiState = (state: QuotaUiState, notify = true) => {
   if (typeof window === 'undefined') return;
   try {
     const next = { ...readQuotaUiState(), ...state };
-    window.sessionStorage.setItem(QUOTA_UI_STATE_KEY, JSON.stringify(next));
+    window.localStorage.setItem(QUOTA_UI_STATE_KEY, JSON.stringify(next));
   } catch {
     // ignore
   }
+  if (notify) announceQuotaPreferenceChange({ ...state });
 };

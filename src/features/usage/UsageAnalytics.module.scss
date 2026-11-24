@@ -1,0 +1,127 @@
+.page {
+  padding: 20px;
+}
+.panel {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background: var(--bg-secondary);
+  min-width: 0;
+}
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  h2 {
+    margin: 0;
+    margin-right: auto;
+    font-size: 21px;
+  }
+}
+.note {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.metrics,
+.breakdown {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+  > div {
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+  strong {
+    display: block;
+    color: var(--text-primary);
+    font-size: 26px;
+    margin-top: 8px;
+  }
+}
+.breakdown {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  strong {
+    font-size: 21px;
+  }
+}
+.chart {
+  overflow-x: auto;
+  svg {
+    display: block;
+    width: 100%;
+    min-width: 650px;
+  }
+  text {
+    fill: var(--text-secondary);
+    font-size: 11px;
+  }
+}
+.grid {
+  stroke: var(--border-color);
+  stroke-dasharray: 3 4;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin: 16px 0;
+  font-size: 12px;
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    overflow-wrap: anywhere;
+  }
+  i {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+    border-radius: 2px;
+  }
+  .line {
+    width: 20px;
+    height: 3px;
+  }
+}
+.table {
+  overflow: auto;
+  max-height: 400px;
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  th,
+  td {
+    text-align: left;
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+  }
+}
+@media (max-width: 800px) {
+  .filters,
+  .metrics,
+  .breakdown {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .panel {
+    padding: 12px;
+  }
+  .page {
+    padding: 8px;
+  }
+}

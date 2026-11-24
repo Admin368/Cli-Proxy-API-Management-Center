@@ -27,7 +27,10 @@ function installSessionStorage() {
       return store.size;
     },
   };
-  (globalThis as unknown as { window: unknown }).window = { sessionStorage: storage };
+  (globalThis as unknown as { window: unknown }).window = {
+    sessionStorage: storage,
+    localStorage: storage,
+  };
   return storage;
 }
 
@@ -46,6 +49,11 @@ afterAll(() => {
 });
 
 describe('quota ui state', () => {
+  test('availability is a supported saved dropdown selection', () => {
+    writeQuotaUiState({ sortMode: 'availability' });
+    expect(readQuotaUiState()?.sortMode).toBe('availability');
+  });
+
   test('round-trips both preferences', () => {
     writeQuotaUiState({ tab: 'codex', sortMode: 'soonest' });
     expect(readQuotaUiState()).toEqual({ tab: 'codex', sortMode: 'soonest' });

@@ -321,15 +321,18 @@ export function useAuthFilesData(options?: UseAuthFilesDataOptions): UseAuthFile
 
   const handleDelete = useCallback(
     (name: string) => {
+      const revision = apiClient.getConnectionRevision();
       showConfirmation({
         title: t('auth_files.delete_title', { defaultValue: 'Delete File' }),
         message: `${t('auth_files.delete_confirm')} "${name}" ?`,
         variant: 'danger',
         confirmText: t('common.confirm'),
         onConfirm: async () => {
+          if (revision !== apiClient.getConnectionRevision()) return;
           setDeleting(name);
           try {
             const result = await authFilesApi.deleteFile(name);
+            if (revision !== apiClient.getConnectionRevision()) return;
             showNotification(t('auth_files.delete_success'), 'success');
             applyDeletedFiles(result.files.length > 0 ? result.files : [name]);
             if (result.deleted > 0) notifyAuthFilesChanged();

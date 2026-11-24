@@ -1,0 +1,15 @@
+.notice {
+  margin: 8px 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 1100px) {
+  .notice {
+    margin: 2px 0;
+    font-size: 11px;
+    line-height: 1.3;
+  }
+}

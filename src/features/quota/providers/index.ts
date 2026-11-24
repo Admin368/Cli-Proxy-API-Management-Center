@@ -33,6 +33,11 @@ export interface QuotaCardState {
   status: 'idle' | 'loading' | 'success' | 'error';
   error?: string;
   errorStatus?: number;
+  cachedAt?: number;
+  /** Time the quota response was received, retained across metadata-only enrichment. */
+  readAt?: number;
+  refreshing?: boolean;
+  refreshFailed?: boolean;
 }
 
 export interface QuotaAdapter {

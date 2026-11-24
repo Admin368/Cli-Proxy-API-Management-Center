@@ -70,7 +70,27 @@ function getRelativeFormatter(locale?: string): Intl.RelativeTimeFormat {
 /** Localized relative phrase, e.g. `in 11 days` / `11 天后` / `11 days ago`. */
 export function formatRelativeInstant(targetMs: number, nowMs: number, locale?: string): string {
   const { value, unit } = relativeTimeParts(targetMs, nowMs);
-  return getRelativeFormatter(locale).format(value, unit);
+  const relative = getRelativeFormatter(locale).format(value, unit);
+  // A truncated "1 day" covers 24–47 hours; expose that difference near reset.
+  if (unit === 'day' && value === 1) {
+    const hours = Math.floor((targetMs - nowMs) / HOUR_MS);
+    let formatter: Intl.NumberFormat;
+    try {
+      formatter = new Intl.NumberFormat(locale, {
+        style: 'unit',
+        unit: 'hour',
+        unitDisplay: 'long',
+      });
+    } catch {
+      formatter = new Intl.NumberFormat(undefined, {
+        style: 'unit',
+        unit: 'hour',
+        unitDisplay: 'long',
+      });
+    }
+    return `${relative} (${formatter.format(hours)})`;
+  }
+  return relative;
 }
 
 /**

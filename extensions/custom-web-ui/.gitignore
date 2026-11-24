@@ -1,0 +1,4 @@
+/bin/
+*.dll
+*.h
+__pycache__/

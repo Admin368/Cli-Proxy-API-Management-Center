@@ -34,3 +34,9 @@ settings.local.json
 *.njsproj
 *.sln
 *.sw?
+
+# Python helper bytecode
+__pycache__/
+
+# Local helper installation paths
+scripts/usage-helper/start.local.ps1
