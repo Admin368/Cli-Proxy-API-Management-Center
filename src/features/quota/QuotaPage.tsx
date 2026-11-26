@@ -23,6 +23,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { IconSearch, IconX } from '@/components/ui/icons';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
 import { useNow } from '@/hooks/useNow';
 import { useRevealGroup } from '@/hooks/motion';
@@ -57,6 +58,7 @@ import {
   saveAvailabilityPreference,
 } from './availability';
 import { nextRecoveryMs } from './resetSchedule';
+import { pushCooldownLast, quotaReadiness } from './readiness';
 import { QUOTA_ADAPTERS, getQuotaSetter, type QuotaCardState } from './providers';
 import type { QuotaProviderType } from './providers/types';
 import { useDevinQuotaAutoLoad } from './providers/devin/useDevinQuotaAutoLoad';
@@ -125,12 +127,16 @@ function QuotaPageContent({
     const saved = readQuotaUiState()?.sortMode;
     return saved ?? (readAvailabilityPreference(snapshotScope) ? 'availability' : 'default');
   });
+  const [cooldownLast, setCooldownLast] = useState<boolean>(
+    () => readQuotaUiState()?.cooldownLast ?? false
+  );
   const [page, setPage] = useState(1);
   useEffect(() => {
     const restore = (event: Event) => {
       const saved = (event as CustomEvent<Record<string, unknown>>).detail ?? readQuotaUiState();
       if (isQuotaTabId(saved?.tab)) setTab(saved.tab);
       if (isQuotaSortMode(saved?.sortMode)) setSortMode(saved.sortMode);
+      if (typeof saved?.cooldownLast === 'boolean') setCooldownLast(saved.cooldownLast);
     };
     window.addEventListener(QUOTA_PREFERENCE_RESTORE, restore);
     return () => window.removeEventListener(QUOTA_PREFERENCE_RESTORE, restore);
@@ -244,8 +250,11 @@ function QuotaPageContent({
 
   // 只在「最快恢复优先」下订阅分钟时钟。默认序下不门控的话，pageItems 每分钟
   // 换一次身份，会反复空转下面那个「刷新全部」的 loading 下降沿 effect。
-  const tick = useNow(sortMode !== 'default');
-  const sortNow = sortMode === 'default' ? 0 : tick;
+  const clockedSort = sortMode !== 'default' || cooldownLast;
+  const tick = useNow(clockedSort);
+  const sortNow = clockedSort ? tick : 0;
+  // Card markers always follow the clock; they never reorder the grid on their own.
+  const markerNow = useNow();
 
   const entries = useMemo(() => classifyQuotaFiles(files), [files]);
   const successfulReads = useRef(new Map<string, { value: QuotaCardState; savedAt: number }>());
@@ -313,21 +322,27 @@ function QuotaPageContent({
   );
   // 排序在分页之前：否则「最快恢复」只在当前页内成立。
   const sortedEntries = useMemo(() => {
-    const entries = sortQuotaEntries(filteredEntries, sortMode, resolveNextRecovery);
-    if (sortMode !== 'availability') return entries;
-    const scores = new Map(
-      entries.map((entry) => [
-        entry,
-        quotaAvailability({
-          name: entry.file.name,
-          displayName: entry.file.name,
-          provider: entry.type,
-          quota: getQuota(entry),
-        }),
-      ])
+    let entries = sortQuotaEntries(filteredEntries, sortMode, resolveNextRecovery);
+    if (sortMode === 'availability') {
+      const scores = new Map(
+        entries.map((entry) => [
+          entry,
+          quotaAvailability({
+            name: entry.file.name,
+            displayName: entry.file.name,
+            provider: entry.type,
+            quota: getQuota(entry),
+          }),
+        ])
+      );
+      entries = [...entries].sort((a, b) => scores.get(b)! - scores.get(a)!);
+    }
+    if (!cooldownLast) return entries;
+    return pushCooldownLast(
+      entries,
+      (entry) => quotaReadiness(entry, getQuota(entry), sortNow).state === 'cooldown'
     );
-    return [...entries].sort((a, b) => scores.get(b)! - scores.get(a)!);
-  }, [filteredEntries, sortMode, resolveNextRecovery, getQuota]);
+  }, [filteredEntries, sortMode, resolveNextRecovery, getQuota, cooldownLast, sortNow]);
 
   const { pageItems, currentPage, totalPages } = useMemo(
     () => paginate(sortedEntries, page, QUOTA_PAGE_SIZE),
@@ -349,6 +364,12 @@ function QuotaPageContent({
     },
     [snapshotScope]
   );
+
+  const handleCooldownLastChange = useCallback((next: boolean) => {
+    setCooldownLast(next);
+    setPage(1);
+    writeQuotaUiState({ cooldownLast: next });
+  }, []);
 
   const sortOptions = useMemo(
     () =>
@@ -572,14 +593,24 @@ function QuotaPageContent({
               </button>
             )}
           </div>
-          <div className={styles.sort}>
-            <Select
-              value={sortMode}
-              options={sortOptions}
-              onChange={handleSortModeChange}
-              ariaLabel={t('quota_management.sort_label')}
-              size="sm"
-            />
+          <div className={styles.sortGroup}>
+            <div className={styles.cooldownToggle} title={t('quota_management.cooldown_last_hint')}>
+              <ToggleSwitch
+                checked={cooldownLast}
+                onChange={handleCooldownLastChange}
+                label={t('quota_management.cooldown_last')}
+                labelPosition="left"
+              />
+            </div>
+            <div className={styles.sort}>
+              <Select
+                value={sortMode}
+                options={sortOptions}
+                onChange={handleSortModeChange}
+                ariaLabel={t('quota_management.sort_label')}
+                size="sm"
+              />
+            </div>
           </div>
         </div>
 
@@ -639,6 +670,7 @@ function QuotaPageContent({
                     key={`${entry.type}:${getQuotaCacheKey(entry.file)}`}
                     entry={entry}
                     quota={getQuota(entry)}
+                    readiness={quotaReadiness(entry, getQuota(entry), markerNow)}
                     requestDataReady={filesGeneration === sessionGeneration && !error}
                     accountActions={accountTools.actionsFor(entry.file)}
                     resolvedTheme={resolvedTheme}

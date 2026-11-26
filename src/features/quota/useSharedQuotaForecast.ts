@@ -97,6 +97,9 @@ export function useSharedQuotaForecast(scope: string) {
               {
                 ...(isQuotaTabId(remote.tab) ? { tab: remote.tab } : {}),
                 ...(isQuotaSortMode(remote.sortMode) ? { sortMode: remote.sortMode } : {}),
+                ...(typeof remote.cooldownLast === 'boolean'
+                  ? { cooldownLast: remote.cooldownLast }
+                  : {}),
               },
               false
             );

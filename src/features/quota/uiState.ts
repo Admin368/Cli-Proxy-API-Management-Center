@@ -10,6 +10,8 @@ import {
 export type QuotaUiState = {
   tab?: QuotaTabId;
   sortMode?: QuotaSortMode;
+  /** Move credentials in cooldown after the available ones. */
+  cooldownLast?: boolean;
 };
 
 const QUOTA_UI_STATE_KEY = 'quotaPage.uiState';
@@ -35,6 +37,7 @@ export const readQuotaUiState = (): QuotaUiState | null => {
     return {
       tab: isQuotaTabId(parsed.tab) ? parsed.tab : undefined,
       sortMode: isQuotaSortMode(parsed.sortMode) ? parsed.sortMode : undefined,
+      cooldownLast: typeof parsed.cooldownLast === 'boolean' ? parsed.cooldownLast : undefined,
     };
   } catch {
     return null;

@@ -21,6 +21,44 @@
     box-shadow var(--dur-hover, 200ms) var(--ease-out-strong, ease-out);
 }
 
+.readinessBadge {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.readinessDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.readinessAvailable {
+  color: var(--success-color);
+  border-color: color-mix(in srgb, var(--success-color) 35%, transparent);
+  background: color-mix(in srgb, var(--success-color) 12%, transparent);
+}
+
+.readinessCooldown {
+  color: var(--warning-color);
+  border-color: color-mix(in srgb, var(--warning-color) 35%, transparent);
+  background: color-mix(in srgb, var(--warning-color) 12%, transparent);
+}
+
+.readinessUntil {
+  font-weight: 500;
+  opacity: 0.8;
+}
+
 .disabledBadge {
   flex-shrink: 0;
   margin-left: auto;

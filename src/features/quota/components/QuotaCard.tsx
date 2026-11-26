@@ -27,6 +27,9 @@ import { QuotaSnapshotNotice } from './QuotaSnapshotNotice';
 import { QuotaCardRequests } from './QuotaCardRequests';
 import { compactCredentialLabel } from '../credentialLabel';
 import { isDisabledAuthFile } from '@/utils/quota/validators';
+import { formatRelativeInstant } from '@/utils/quota/relativeTime';
+import { useNow } from '@/hooks/useNow';
+import type { QuotaReadiness } from '../readiness';
 
 /** Bind the quota-page styles to the shared rendering contract. */
 const quotaClasses = bindQuotaClasses(bodyStyles, 'QuotaBody.module.scss');
@@ -43,6 +46,8 @@ export type QuotaCardProps = {
   onReset: () => void;
   requestDataReady?: boolean;
   accountActions?: ReactNode;
+  /** Available / cooldown marker; omitted or unknown renders nothing. */
+  readiness?: QuotaReadiness;
 };
 
 export function QuotaCard(props: QuotaCardProps) {
@@ -56,7 +61,7 @@ export function QuotaCard(props: QuotaCardProps) {
     onRefresh,
     onReset,
   } = props;
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const adapter = QUOTA_ADAPTERS[entry.type];
   const file = entry.file;
   const disabled = isDisabledAuthFile(file);
@@ -143,8 +148,10 @@ export function QuotaCard(props: QuotaCardProps) {
         <span className={styles.fileName} title={getQuotaDisplayName(file)}>
           {displayName}
         </span>
-        {disabled && (
+        {disabled ? (
           <span className={styles.disabledBadge}>{t('quota_management.disabled_account')}</span>
+        ) : (
+          <ReadinessBadge readiness={props.readiness} locale={i18n.language} />
         )}
       </header>
 
@@ -245,5 +252,31 @@ export function QuotaCard(props: QuotaCardProps) {
       )}
       {props.accountActions}
     </article>
+  );
+}
+
+function ReadinessBadge({ readiness, locale }: { readiness?: QuotaReadiness; locale: string }) {
+  const { t } = useTranslation();
+  const now = useNow();
+  if (!readiness || readiness.state === 'unknown') return null;
+  if (readiness.state === 'available') {
+    return (
+      <span className={`${styles.readinessBadge} ${styles.readinessAvailable}`}>
+        <span className={styles.readinessDot} aria-hidden="true" />
+        {t('quota_management.status_available')}
+      </span>
+    );
+  }
+  const until =
+    readiness.untilMs === null ? null : formatRelativeInstant(readiness.untilMs, now, locale);
+  return (
+    <span
+      className={`${styles.readinessBadge} ${styles.readinessCooldown}`}
+      title={until ? t('quota_management.status_cooldown_until', { time: until }) : undefined}
+    >
+      <span className={styles.readinessDot} aria-hidden="true" />
+      {t('quota_management.status_cooldown')}
+      {until && <span className={styles.readinessUntil}>{until}</span>}
+    </span>
   );
 }
