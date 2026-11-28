@@ -107,6 +107,35 @@ func TestUsageRecordsPagingAndWindow(t *testing.T) {
 	}
 }
 
+func TestUsageRecordsIncludeRowsStillInTheWAL(t *testing.T) {
+	path := createUsageFixture(t, t.TempDir(), 2)
+	writer, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer writer.Close()
+	writer.SetMaxOpenConns(1)
+	if _, err := writer.Exec(`PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writer.Exec(`INSERT INTO usage_events (id, timestamp, timestamp_ms, model, provider, source, api_key_hash, failed,
+ input_tokens, output_tokens, reasoning_tokens, cache_read_tokens, cache_creation_tokens, total_tokens, latency_ms)
+ VALUES (3, 't', 3, 'wal-model', 'p', 's.json', '', 0, 1, 1, 0, 0, 0, 2, 1)`); err != nil {
+		t.Fatal(err)
+	}
+	// The writer stays open and nothing is checkpointed: row 3 exists only in the -wal file.
+	if info, err := os.Stat(path + "-wal"); err != nil || info.Size() == 0 {
+		t.Fatal("fixture did not leave the row in the WAL")
+	}
+	page, err := readUsageRecords(path, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Items) != 1 || page.Items[0]["model"] != "wal-model" || page.Cursor != "3" {
+		t.Fatalf("WAL row not read: %+v", page)
+	}
+}
+
 func TestUsageRecordsIsReadOnlyAndRejectsBadInput(t *testing.T) {
 	dir := t.TempDir()
 	if _, err := readUsageRecords(filepath.Join(dir, "missing.db"), 0); err == nil {

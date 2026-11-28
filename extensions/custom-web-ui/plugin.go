@@ -27,6 +27,12 @@ func handleMethod(method string, raw []byte) ([]byte, error) {
 		if err := yaml.Unmarshal(request.ConfigYAML, &cfg); err != nil {
 			return nil, err
 		}
+		// Validate everything before changing any state, so a rejected
+		// configuration never leaves the server half-reconfigured.
+		if err := validateUsagePath(cfg.UsageDatabase); err != nil {
+			return nil, err
+		}
+		autoStartWasOn := server.autoStartEnabled()
 		if err := server.configure(cfg); err != nil {
 			return nil, err
 		}
@@ -36,7 +42,11 @@ func handleMethod(method string, raw []byte) ([]byte, error) {
 		if err := sharedUsage.configure(cfg.UsageDatabase); err != nil {
 			return nil, err
 		}
-		server.autoStart()
+		// Auto-start when the core loads the plugin, or when auto_start is switched on.
+		// Other reconfigures must not restart a server the user stopped.
+		if method == pluginabi.MethodPluginRegister || !autoStartWasOn {
+			server.autoStart()
+		}
 		return okEnvelope(map[string]any{"schema_version": pluginabi.SchemaVersion, "metadata": pluginapi.Metadata{Name: "Custom Web UI", Version: "0.3.0", Author: "Local", GitHubRepository: "https://github.com/Admin368/Cli-Proxy-API-Management-Center", ConfigFields: []pluginapi.ConfigField{
 			{Name: "workspace", Type: pluginapi.ConfigFieldTypeString, Description: "Absolute path to the custom management UI checkout."},
 			{Name: "bun_binary", Type: pluginapi.ConfigFieldTypeString, Description: "Absolute path to bun.exe (dev mode only)."},

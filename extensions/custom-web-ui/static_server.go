@@ -202,18 +202,25 @@ func dashboardHandler(dist string) http.Handler {
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("Referrer-Policy", "no-referrer")
 		h.Set("X-Frame-Options", "DENY")
-		clean := path.Clean("/" + r.URL.Path)
-		for _, segment := range strings.Split(clean, "/") {
-			if strings.HasPrefix(segment, ".") {
-				http.NotFound(w, r)
-				return
-			}
+		// Backslashes and colons are path syntax on Windows (e.g. /assets/%5C.env,
+		// /C:x), so refuse them outright rather than trusting a "/" split.
+		if strings.ContainsAny(r.URL.Path, `\:`) {
+			http.NotFound(w, r)
+			return
 		}
+		clean := path.Clean("/" + r.URL.Path)
 		target := filepath.Join(dist, filepath.FromSlash(clean))
 		rel, err := filepath.Rel(dist, target)
 		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 			http.NotFound(w, r)
 			return
+		}
+		// Check every component of the path as the filesystem will resolve it.
+		for _, segment := range strings.Split(rel, string(filepath.Separator)) {
+			if strings.HasPrefix(segment, ".") && segment != "." {
+				http.NotFound(w, r)
+				return
+			}
 		}
 		info, err := os.Stat(target)
 		if err != nil || info.IsDir() {

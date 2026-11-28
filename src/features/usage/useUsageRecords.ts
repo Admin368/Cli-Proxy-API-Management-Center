@@ -1,5 +1,10 @@
 import { readDesktopUsage } from '@/services/api/desktopUsage';
 import type { DesktopUsageConnection } from './desktopConnection';
+
+/** The helper's troubleshooting text (token, origin, backend URL) does not apply to the plugin source. */
+export function desktopErrorKey(desktop: DesktopUsageConnection): string {
+  return desktop.kind === 'plugin' ? 'desktop_plugin_error' : 'desktop_error';
+}
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiClient } from '@/services/api/client';
 import { usageRecordsApi, type UsageRecord } from '@/services/api/usageRecords';
@@ -162,7 +167,7 @@ export function useUsageRecords(
       } else await perform();
     } catch {
       if (isCurrent()) {
-        setError(desktop ? 'desktop_error' : 'collection_error');
+        setError(desktop ? desktopErrorKey(desktop) : 'collection_error');
         setCollecting(false);
       }
     } finally {
@@ -254,7 +259,7 @@ export function useUsageRecords(
         setLastRead(Date.now());
       }
     } catch {
-      if (isCurrent()) setError('desktop_error');
+      if (isCurrent()) setError(desktopErrorKey(desktop));
     } finally {
       running.current = false;
       if (isCurrent()) setBusy(false);

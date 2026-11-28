@@ -2420,6 +2420,7 @@
     "desktop_invalid": "Enter a loopback helper URL and a valid token. Browser session storage must be available.",
     "desktop_notice": "Read saved desktop history every 30 seconds while this page is open and focused. This does not remove records or read the core queue.",
     "desktop_error": "Desktop history could not be read. Check that the helper is running, its token and allowed origin match, and its backend URL matches this connection.",
+    "desktop_plugin_error": "Desktop history could not be read through the proxy plugin. Check that the Custom Web UI plugin is enabled, its usage_database points at the desktop app's usage-records\\usage.db, and the core is up to date.",
     "queue_notice": "This reads and removes records from the backend shared usage queue. Another collector, including the desktop app, may not receive those records. It does not change quota polling or API traffic. Collection runs every 30 seconds only while this page is open and focused.",
     "start": "Start collecting",
     "collecting": "Collecting locally",

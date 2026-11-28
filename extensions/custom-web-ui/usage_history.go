@@ -53,11 +53,19 @@ type usageHistory struct {
 
 var sharedUsage usageHistory
 
-func (u *usageHistory) configure(path string) error {
+func validateUsagePath(path string) error {
 	path = strings.TrimSpace(path)
 	if path != "" && !filepath.IsAbs(path) {
 		return errors.New("usage_database must be an absolute path")
 	}
+	return nil
+}
+
+func (u *usageHistory) configure(path string) error {
+	if err := validateUsagePath(path); err != nil {
+		return err
+	}
+	path = strings.TrimSpace(path)
 	u.Lock()
 	u.path = path
 	u.Unlock()

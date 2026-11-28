@@ -3,10 +3,76 @@
 package main
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/router-for-me/CLIProxyAPI/v8/sdk/pluginabi"
 )
+
+func lifecycle(t *testing.T, method, yamlText string) error {
+	t.Helper()
+	raw, _ := json.Marshal(lifecycleRequest{ConfigYAML: []byte(yamlText)})
+	_, err := handleMethod(method, raw)
+	return err
+}
+
+func TestLifecycleAutoStartAndAtomicReconfigure(t *testing.T) {
+	defer func() { server.shutdown(); server = controller{} }()
+	dist := writeDist(t)
+	port := freeLoopbackPort(t)
+	base := "mode: static\nauto_start: true\ndist_dir: " + strconv.Quote(dist) + "\nport: " + strconv.Itoa(port) + "\n"
+	if err := lifecycle(t, pluginabi.MethodPluginRegister, base); err != nil {
+		t.Fatal(err)
+	}
+	if !server.status().Running {
+		t.Fatal("register with auto_start must start the server")
+	}
+	if err := server.stop(); err != nil {
+		t.Fatal(err)
+	}
+	if err := lifecycle(t, pluginabi.MethodPluginReconfigure, base); err != nil {
+		t.Fatal(err)
+	}
+	if server.status().Managed {
+		t.Fatal("reconfigure restarted a server the user stopped")
+	}
+	otherPort := freeLoopbackPort(t)
+	bad := "mode: static\nauto_start: true\ndist_dir: " + strconv.Quote(dist) + "\nport: " + strconv.Itoa(otherPort) + "\nusage_database: relative.db\n"
+	if err := lifecycle(t, pluginabi.MethodPluginReconfigure, bad); err == nil {
+		t.Fatal("relative usage_database accepted")
+	}
+	if server.cfg.Port != port {
+		t.Fatal("rejected configuration was partly applied")
+	}
+	off := "mode: static\nauto_start: false\ndist_dir: " + strconv.Quote(dist) + "\nport: " + strconv.Itoa(port) + "\n"
+	lifecycle(t, pluginabi.MethodPluginReconfigure, off)
+	if err := lifecycle(t, pluginabi.MethodPluginReconfigure, base); err != nil {
+		t.Fatal(err)
+	}
+	if !server.status().Running {
+		t.Fatal("switching auto_start on must start the server")
+	}
+}
+
+func TestStaticStartIgnoresLoopbackWhenNotListening(t *testing.T) {
+	busy := freeLoopbackPort(t)
+	// Something unrelated answers on 127.0.0.1:<port>; listen uses another loopback address only.
+	external := newFixtureServer(t, busy)
+	defer external.Close()
+	c := controller{}
+	if err := c.configure(config{DistDir: writeDist(t), Port: busy, Mode: "static", Listen: "127.0.0.2"}); err != nil {
+		t.Fatal(err)
+	}
+	defer c.shutdown()
+	if err := c.start(); err != nil {
+		t.Fatal("unrelated loopback service blocked a 127.0.0.2-only start:", err)
+	}
+	if st := c.status(); !st.Running || !strings.Contains(st.URL, "127.0.0.2") {
+		t.Fatalf("status: %+v", st)
+	}
+}
 
 func TestStaticModeAutoStartStatusAndStop(t *testing.T) {
 	workspace := t.TempDir()

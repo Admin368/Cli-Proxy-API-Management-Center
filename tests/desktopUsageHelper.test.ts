@@ -1,6 +1,7 @@
 import { expect, mock, spyOn, test } from 'bun:test';
 import { execFileSync } from 'node:child_process';
 import { apiClient } from '@/services/api/client';
+import { desktopErrorKey } from '@/features/usage/useUsageRecords';
 import { desktopUsageUrl, pluginUsageUrl, readDesktopUsage } from '@/services/api/desktopUsage';
 import {
   readDesktopUsageConnection,
@@ -97,6 +98,13 @@ test('stored desktop sources keep working: legacy helper entries and the plugin 
     if (original === undefined) delete (globalThis as { sessionStorage?: unknown }).sessionStorage;
     else (globalThis as { sessionStorage?: unknown }).sessionStorage = original;
   }
+});
+
+test('plugin source failures point at the plugin, not the helper token', () => {
+  expect(desktopErrorKey({ kind: 'plugin' })).toBe('desktop_plugin_error');
+  expect(desktopErrorKey({ kind: 'helper', url: 'http://127.0.0.1:8318', token: 't' })).toBe(
+    'desktop_error'
+  );
 });
 
 function checkStoredSources() {

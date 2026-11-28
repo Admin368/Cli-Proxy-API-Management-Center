@@ -98,6 +98,12 @@ func (c *controller) configure(cfg config) error {
 }
 func urlFor(cfg config) string { return "http://127.0.0.1:" + strconv.Itoa(cfg.Port) + "/" }
 
+func (c *controller) autoStartEnabled() bool {
+	c.Lock()
+	defer c.Unlock()
+	return c.cfg.AutoStart
+}
+
 // autoStart starts the configured server when auto_start is set. Failures are
 // reported through status instead of failing plugin registration.
 func (c *controller) autoStart() {
@@ -160,10 +166,9 @@ func (c *controller) startLocked() error {
 	if c.job != 0 || c.static.status().Active {
 		return nil
 	}
-	if probe(urlFor(c.cfg)) {
-		return errors.New("a server is already running outside this plugin; it will not be stopped or replaced")
-	}
 	if c.cfg.static() {
+		// Busy addresses are reported per address and retried, so no loopback probe here:
+		// listen may not include 127.0.0.1 at all.
 		hosts, err := parseListenHosts(c.cfg.Listen)
 		if err != nil {
 			return err
@@ -173,6 +178,9 @@ func (c *controller) startLocked() error {
 		}
 		c.lastError = ""
 		return nil
+	}
+	if probe(urlFor(c.cfg)) {
+		return errors.New("a server is already running outside this plugin; it will not be stopped or replaced")
 	}
 	if !filepath.IsAbs(c.cfg.Workspace) || !filepath.IsAbs(c.cfg.Bun) {
 		return errors.New("configure absolute workspace and bun_binary paths first")

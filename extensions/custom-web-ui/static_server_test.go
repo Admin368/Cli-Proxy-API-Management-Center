@@ -34,6 +34,17 @@ func get(t *testing.T, method, rawURL string) (int, string, http.Header) {
 	return resp.StatusCode, string(body), resp.Header
 }
 
+func newFixtureServer(t *testing.T, port int) *http.Server {
+	t.Helper()
+	l, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(port))
+	if err != nil {
+		t.Fatal(err)
+	}
+	srv := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("other")) })}
+	go srv.Serve(l)
+	return srv
+}
+
 func freeLoopbackPort(t *testing.T) int {
 	t.Helper()
 	l, err := net.Listen("tcp", "127.0.0.1:0")
@@ -65,6 +76,15 @@ func TestStaticServerServesOnlyTheBuiltDashboard(t *testing.T) {
 		{"/assets/../.env", 404, ""},
 		{"/%2e%2e/%2e%2e/windows/win.ini", 404, ""},
 		{"/missing.js", 404, ""},
+		{"/%5C.env", 404, ""},
+		{"/assets/%5C.env", 404, ""},
+		{"/assets/%5C..%5C.env", 404, ""},
+		{"/C:%5Cwindows%5Cwin.ini", 404, ""},
+		{"/assets/.hidden/x.js", 404, ""},
+	}
+	os.WriteFile(filepath.Join(dist, "assets", ".env"), []byte("SECRET=2"), 0o600)
+	if status, body, _ := get(t, "GET", base+"/assets/%5C.env"); status != 404 || strings.Contains(body, "SECRET") {
+		t.Fatalf("hidden file reachable through a backslash: %d %q", status, body)
 	}
 	for _, c := range cases {
 		status, body, _ := get(t, "GET", base+c.path)
