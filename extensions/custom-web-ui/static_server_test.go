@@ -82,6 +82,34 @@ func TestStaticServerServesOnlyTheBuiltDashboard(t *testing.T) {
 		{"/C:%5Cwindows%5Cwin.ini", 404, ""},
 		{"/assets/.hidden/x.js", 404, ""},
 	}
+	// 8.3 short names (ENV~1 for .env) and links out of dist must not be served.
+	os.MkdirAll(filepath.Join(dist, ".git"), 0o700)
+	os.WriteFile(filepath.Join(dist, ".git", "config"), []byte("SECRET=3"), 0o600)
+	for _, p := range []string{"/ENV~1", "/GIT~1/config", "/assets/~tmp.js"} {
+		if status, body, _ := get(t, "GET", base+p); status != 404 || strings.Contains(body, "SECRET") {
+			t.Fatalf("%s: got %d %q", p, status, body)
+		}
+	}
+	// Independently of the "~" filter, the opened-file check rejects a short name.
+	if f, err := os.Open(filepath.Join(dist, "ENV~1")); err == nil {
+		if openedInside(dist, f) {
+			t.Fatal("short name of a hidden file passed the opened-path check")
+		}
+		f.Close()
+	}
+	if f, err := os.Open(filepath.Join(dist, "assets", "app.js")); err == nil {
+		if !openedInside(dist, f) {
+			t.Fatal("regular asset rejected by the opened-path check")
+		}
+		f.Close()
+	}
+	outside := filepath.Join(t.TempDir(), "outside.txt")
+	os.WriteFile(outside, []byte("SECRET=4"), 0o600)
+	if os.Symlink(outside, filepath.Join(dist, "assets", "link.txt")) == nil {
+		if status, body, _ := get(t, "GET", base+"/assets/link.txt"); status != 404 || strings.Contains(body, "SECRET") {
+			t.Fatalf("symlink out of dist served: %d %q", status, body)
+		}
+	}
 	os.WriteFile(filepath.Join(dist, "assets", ".env"), []byte("SECRET=2"), 0o600)
 	if status, body, _ := get(t, "GET", base+"/assets/%5C.env"); status != 404 || strings.Contains(body, "SECRET") {
 		t.Fatalf("hidden file reachable through a backslash: %d %q", status, body)

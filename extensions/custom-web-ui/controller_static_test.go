@@ -54,6 +54,21 @@ func TestLifecycleAutoStartAndAtomicReconfigure(t *testing.T) {
 	if !server.status().Running {
 		t.Fatal("switching auto_start on must start the server")
 	}
+	// A setting unrelated to serving does not restart the server.
+	before := server.static.servers["127.0.0.1"]
+	if err := lifecycle(t, pluginabi.MethodPluginReconfigure, base+"history_file: "+strconv.Quote(dist+`\h.json`)+"\n"); err != nil {
+		t.Fatal(err)
+	}
+	if server.static.servers["127.0.0.1"] != before {
+		t.Fatal("unrelated setting restarted the static server")
+	}
+	// Switching to dev mode stops the static server and does not launch Bun by itself.
+	if err := lifecycle(t, pluginabi.MethodPluginReconfigure, "mode: dev\nauto_start: true\nport: "+strconv.Itoa(port)+"\n"); err != nil {
+		t.Fatal(err)
+	}
+	if st := server.status(); st.Managed || server.job != 0 {
+		t.Fatalf("switching to dev started a process: %+v", st)
+	}
 }
 
 func TestStaticStartIgnoresLoopbackWhenNotListening(t *testing.T) {

@@ -203,8 +203,9 @@ func dashboardHandler(dist string) http.Handler {
 		h.Set("Referrer-Policy", "no-referrer")
 		h.Set("X-Frame-Options", "DENY")
 		// Backslashes and colons are path syntax on Windows (e.g. /assets/%5C.env,
-		// /C:x), so refuse them outright rather than trusting a "/" split.
-		if strings.ContainsAny(r.URL.Path, `\:`) {
+		// /C:x), and "~" can name a hidden file by its 8.3 short name (ENV~1 for
+		// .env), so refuse them outright rather than trusting a "/" split.
+		if strings.ContainsAny(r.URL.Path, `\:~`) {
 			http.NotFound(w, r)
 			return
 		}
@@ -245,6 +246,38 @@ func dashboardHandler(dist string) http.Handler {
 			return
 		}
 		defer file.Close()
+		// Re-check what was actually opened: short names, symlinks and junctions
+		// must still resolve to a non-hidden regular file inside dist.
+		if info, err = file.Stat(); err != nil || !info.Mode().IsRegular() || !openedInside(dist, file) {
+			http.NotFound(w, r)
+			return
+		}
 		http.ServeContent(w, r, info.Name(), info.ModTime(), file)
 	})
+}
+
+func openedInside(dist string, file *os.File) bool {
+	root, err := os.Open(dist)
+	if err != nil {
+		return false
+	}
+	defer root.Close()
+	rootPath, err := finalPath(root)
+	if err != nil {
+		return false
+	}
+	filePath, err := finalPath(file)
+	if err != nil {
+		return false
+	}
+	rel, err := filepath.Rel(rootPath, filePath)
+	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+		return false
+	}
+	for _, segment := range strings.Split(rel, string(filepath.Separator)) {
+		if strings.HasPrefix(segment, ".") {
+			return false
+		}
+	}
+	return true
 }

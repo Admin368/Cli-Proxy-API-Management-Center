@@ -1,16 +1,16 @@
 import { readDesktopUsage } from '@/services/api/desktopUsage';
 import type { DesktopUsageConnection } from './desktopConnection';
-
-/** The helper's troubleshooting text (token, origin, backend URL) does not apply to the plugin source. */
-export function desktopErrorKey(desktop: DesktopUsageConnection): string {
-  return desktop.kind === 'plugin' ? 'desktop_plugin_error' : 'desktop_error';
-}
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiClient } from '@/services/api/client';
 import { usageRecordsApi, type UsageRecord } from '@/services/api/usageRecords';
 import { readUsageCollection, writeUsageCollection } from './preferences';
 import { mergeUsageRecords, parseUsageCsv } from './model';
 import { appendUsageHistory, readUsageHistory, writeUsageHistory } from './storage';
+
+/** The helper's troubleshooting text (token, origin, backend URL) does not apply to the plugin source. */
+export function desktopErrorKey(desktop: DesktopUsageConnection): string {
+  return desktop.kind === 'plugin' ? 'desktop_plugin_error' : 'desktop_error';
+}
 
 export function useUsageRecords(
   scope: string,

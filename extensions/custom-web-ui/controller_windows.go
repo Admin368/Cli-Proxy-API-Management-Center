@@ -85,16 +85,24 @@ func (c *controller) configure(cfg config) error {
 	if c.job != 0 && c.cfg != cfg {
 		return errors.New("stop the managed server before changing its configuration")
 	}
-	if c.cfg != cfg && c.static.stop() {
-		// The built-in server restarts cheaply; apply the new settings right away.
+	if c.static.status().Active && servingChanged(c.cfg, cfg) {
+		// The built-in server restarts cheaply; apply new serving settings right away.
+		// Switching to dev mode only stops it: Bun starts on Start or auto_start.
+		c.static.stop()
 		c.cfg = cfg
-		if err := c.startLocked(); err != nil {
-			c.lastError = err.Error()
+		if cfg.static() {
+			if err := c.startLocked(); err != nil {
+				c.lastError = err.Error()
+			}
 		}
 		return nil
 	}
 	c.cfg = cfg
 	return nil
+}
+// servingChanged reports whether a change affects what or where the static server serves.
+func servingChanged(a, b config) bool {
+	return a.Mode != b.Mode || a.distDir() != b.distDir() || a.Listen != b.Listen || a.Port != b.Port
 }
 func urlFor(cfg config) string { return "http://127.0.0.1:" + strconv.Itoa(cfg.Port) + "/" }
 
