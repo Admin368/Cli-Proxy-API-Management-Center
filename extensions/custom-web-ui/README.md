@@ -14,6 +14,22 @@ The installer preserves existing configuration, backs it up locally, enables onl
 
 Plugin controls use authenticated `/v0/management/plugins/custom-web-ui/status`, `/start`, and `/stop`. These are backend-declared plugin extension paths; ordinary app Management API calls remain v8. Only POST starts or stops a process. The resource GET route is static and cannot execute actions. EasyCLIProxyAPI injects its signed-in management connection into the plugin webview; the panel reads that existing connection at runtime. No key is built into HTML, saved by the plugin, or placed in URLs. All six app languages are supported.
 
+## Serving modes and options
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `mode` | `dev` | `static` serves the built dashboard (`dist/`) from inside the plugin with no Bun or Python process. `dev` runs `bun run dev` on 127.0.0.1 as before. The installer selects `static`. |
+| `dist_dir` | `<workspace>\dist` | Static mode: built dashboard to serve. Run `bun run build` after pulling changes. |
+| `listen` | `127.0.0.1` | Static mode: comma-separated IP addresses, e.g. `127.0.0.1,100.64.0.1` to also serve on a Tailscale address. Addresses that are not available yet (Tailscale still starting, port busy) are retried every 10 seconds. `0.0.0.0`/`::` are refused: name each address, and scope the firewall rule to it. |
+| `auto_start` | `false` | Start the dashboard server whenever the core loads the plugin, so it is up for as long as the core runs. Start/Stop in the panel still work. Errors appear in the panel instead of failing plugin load. |
+| `usage_database` | none | The desktop app's `usage-records\usage.db`. Enables **Request details → Desktop history → Use proxy history (plugin)**. |
+
+Static mode only serves regular files below `dist` (hidden files and paths outside `dist` are refused; extension-less paths fall back to `index.html`). The dashboard itself still connects to the proxy API you sign in to.
+
+## Desktop history through the plugin
+
+Authenticated `GET /v0/management/plugins/custom-web-ui/usage-records?after=<cursor>` returns the same pages as `scripts/usage-helper` (up to 500 records from the newest 10,000 rows, identical record ids and account fingerprints, no failure bodies, headers, raw keys or client IPs). The database is opened read-only per request and recent WAL records are included. It uses the dashboard's existing Management API sign-in, so it works from any machine that can reach the proxy, and the separate loopback helper and its token are not needed.
+
 ## Process ownership
 
 Start launches exactly `bun run dev --host 127.0.0.1 --port <port> --strictPort` in the configured checkout. It uses Windows CreateProcess with a suspended parent, assigns a private Job Object, then resumes it. Every descendant stays in that job. Stop terminates only that job, never the proxy core or a process merely listening on the same port. An independently started server is reported as external and cannot be stopped by the plugin.
