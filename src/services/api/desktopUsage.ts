@@ -1,4 +1,6 @@
 import { normalizeUsageRecord, type UsageRecord } from './usageRecords';
+import { apiClient } from './client';
+import { normalizeApiBase } from '@/utils/connection';
 import type { DesktopUsageConnection } from '@/features/usage/desktopConnection';
 
 export function desktopUsageUrl(value: string): string {
@@ -17,12 +19,17 @@ export function desktopUsageUrl(value: string): string {
   return url.origin;
 }
 
-/** Separate local extension: never send the Management API credential to the helper. */
-export async function readDesktopUsage(
-  connection: DesktopUsageConnection,
+/** Exact backend-declared plugin extension path, served behind Management API authentication. */
+export function pluginUsageUrl(backend: string, after: string): string {
+  return `${normalizeApiBase(backend)}/v0/management/plugins/custom-web-ui/usage-records?after=${encodeURIComponent(after)}`;
+}
+
+async function fetchHelperPage(
+  connection: { url: string; token: string },
   backend: string,
   after: string
-): Promise<{ records: UsageRecord[]; cursor: string; hasMore: boolean }> {
+): Promise<unknown> {
+  /* Separate local extension: never send the Management API credential to the helper. */
   const response = await fetch(
     `${desktopUsageUrl(connection.url)}/records?after=${encodeURIComponent(after)}`,
     {
@@ -37,7 +44,20 @@ export async function readDesktopUsage(
     }
   );
   if (!response.ok) throw new Error(`Desktop helper HTTP ${response.status}`);
-  const data: unknown = await response.json();
+  return response.json();
+}
+
+export async function readDesktopUsage(
+  connection: DesktopUsageConnection,
+  backend: string,
+  after: string
+): Promise<{ records: UsageRecord[]; cursor: string; hasMore: boolean }> {
+  const data: unknown =
+    connection.kind === 'plugin'
+      ? await apiClient
+          .captureConnection()
+          .get<unknown>(pluginUsageUrl(backend, after), { timeout: 15_000 })
+      : await fetchHelperPage(connection, backend, after);
   if (
     !data ||
     typeof data !== 'object' ||

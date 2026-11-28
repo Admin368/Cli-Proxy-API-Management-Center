@@ -7,6 +7,11 @@ import { readUsageCollection, writeUsageCollection } from './preferences';
 import { mergeUsageRecords, parseUsageCsv } from './model';
 import { appendUsageHistory, readUsageHistory, writeUsageHistory } from './storage';
 
+/** The helper's troubleshooting text (token, origin, backend URL) does not apply to the plugin source. */
+export function desktopErrorKey(desktop: DesktopUsageConnection): string {
+  return desktop.kind === 'plugin' ? 'desktop_plugin_error' : 'desktop_error';
+}
+
 export function useUsageRecords(
   scope: string,
   connected: boolean,
@@ -162,7 +167,7 @@ export function useUsageRecords(
       } else await perform();
     } catch {
       if (isCurrent()) {
-        setError(desktop ? 'desktop_error' : 'collection_error');
+        setError(desktop ? desktopErrorKey(desktop) : 'collection_error');
         setCollecting(false);
       }
     } finally {
@@ -254,7 +259,7 @@ export function useUsageRecords(
         setLastRead(Date.now());
       }
     } catch {
-      if (isCurrent()) setError('desktop_error');
+      if (isCurrent()) setError(desktopErrorKey(desktop));
     } finally {
       running.current = false;
       if (isCurrent()) setBusy(false);

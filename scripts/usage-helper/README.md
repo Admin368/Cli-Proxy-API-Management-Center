@@ -1,5 +1,7 @@
 # Desktop usage helper
 
+> When the proxy runs the **custom-web-ui** plugin with `usage_database` configured, prefer **Use proxy history (plugin)** in Request details: it serves the same records through the signed-in Management API, also from other machines, without this helper or its token. See `extensions/custom-web-ui/README.md`.
+
 This optional Python 3.10+ helper reads the official EasyCLIProxyAPI desktop application's SQLite history. It does not replace, rebuild, configure, or drain the desktop/core collector. No Python packages are required.
 
 From the management frontend repository, run (PowerShell example):

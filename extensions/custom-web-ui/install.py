@@ -16,8 +16,10 @@ def main():
     parser.add_argument('--installation', type=Path, required=True)
     args = parser.parse_args()
     root = args.installation.resolve()
-    if (root / 'core-version.txt').read_text(encoding='utf-8-sig').strip().lstrip('v') != '8.0.53':
-        raise SystemExit('Re-test this extension before installing on a different core version.')
+    core = (root / 'core-version.txt').read_text(encoding='utf-8-sig').strip().lstrip('v')
+    parts = tuple(int(p) for p in core.split('.')[:3] if p.isdigit())
+    if len(parts) != 3 or parts[0] != 8 or parts < (8, 0, 53):
+        raise SystemExit(f'Core {core} is not a tested v8 core (8.0.53 or newer); re-test this extension first.')
     source = Path(__file__).resolve().parent
     workspace = source.parents[1]
     binary = source / 'bin/custom-web-ui.dll'
@@ -37,9 +39,16 @@ def main():
     previous = configs.get('custom-web-ui', {})
     configs['custom-web-ui'] = {
         'enabled': True, 'priority': 0, 'workspace': str(workspace),
-        'bun_binary': bun, 'port': 5173,
+        'bun_binary': bun, 'port': previous.get('port', 5173),
         'history_file': previous.get('history_file') or str(Path(os.environ['LOCALAPPDATA']) / ('CLIProxyManagementLauncher/forecast-history-' + hashlib.sha256(str(root).lower().encode()).hexdigest()[:12] + '.json')),
+        # Serve the built dashboard from the plugin and start it with the core; keep any choices made earlier.
+        'mode': previous.get('mode', 'static'),
+        'listen': previous.get('listen', '127.0.0.1'),
+        'auto_start': previous.get('auto_start', True),
+        'usage_database': previous.get('usage_database') or str(root / 'usage-records' / 'usage.db'),
     }
+    if configs['custom-web-ui']['mode'] == 'static' and not (workspace / 'dist' / 'index.html').exists():
+        print('Note: run "bun run build" in the workspace so the plugin has a dashboard to serve.')
     updated = replace_plugins(text, plugins)
     after = yaml.safe_load(updated)
     assert {k:v for k,v in before.items() if k != 'plugins'} == {k:v for k,v in after.items() if k != 'plugins'}

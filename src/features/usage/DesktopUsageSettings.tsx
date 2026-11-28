@@ -36,47 +36,57 @@ export function DesktopUsageSettings({
         <p>{t('usage.history_hint')}</p>
         {connection ? (
           <>
-            <p>{t('usage.desktop_connected', { url: connection.url })}</p>
+            <p>
+              {connection.kind === 'plugin'
+                ? t('usage.desktop_connected_plugin')
+                : t('usage.desktop_connected', { url: connection.url })}
+            </p>
             <Button disabled={disabled} onClick={() => onChange(null)}>
               {t('usage.desktop_disconnect')}
             </Button>
           </>
         ) : (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              try {
-                const normalized = desktopUsageUrl(url);
-                if (token.trim().length < 32) throw new Error('Invalid token');
-                onChange({ url: normalized, token: token.trim() });
-                setToken('');
-                setError(false);
-              } catch {
-                setError(true);
-              }
-            }}
-          >
-            <Input
-              label={t('usage.desktop_url')}
-              value={url}
-              onChange={(event) => setUrl(event.target.value)}
-              disabled={disabled}
-              required
-            />
-            <Input
-              label={t('usage.desktop_token')}
-              type="password"
-              autoComplete="off"
-              value={token}
-              onChange={(event) => setToken(event.target.value)}
-              disabled={disabled}
-              required
-            />
-            {error && <p role="alert">{t('usage.desktop_invalid')}</p>}
-            <Button type="submit" disabled={disabled}>
-              {t('usage.desktop_connect')}
+          <>
+            <p>{t('usage.desktop_plugin_hint')}</p>
+            <Button disabled={disabled} onClick={() => onChange({ kind: 'plugin' })}>
+              {t('usage.desktop_use_plugin')}
             </Button>
-          </form>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                try {
+                  const normalized = desktopUsageUrl(url);
+                  if (token.trim().length < 32) throw new Error('Invalid token');
+                  onChange({ kind: 'helper', url: normalized, token: token.trim() });
+                  setToken('');
+                  setError(false);
+                } catch {
+                  setError(true);
+                }
+              }}
+            >
+              <Input
+                label={t('usage.desktop_url')}
+                value={url}
+                onChange={(event) => setUrl(event.target.value)}
+                disabled={disabled}
+                required
+              />
+              <Input
+                label={t('usage.desktop_token')}
+                type="password"
+                autoComplete="off"
+                value={token}
+                onChange={(event) => setToken(event.target.value)}
+                disabled={disabled}
+                required
+              />
+              {error && <p role="alert">{t('usage.desktop_invalid')}</p>}
+              <Button type="submit" disabled={disabled}>
+                {t('usage.desktop_connect')}
+              </Button>
+            </form>
+          </>
         )}
         <p>{t('usage.retention')}</p>
       </div>
